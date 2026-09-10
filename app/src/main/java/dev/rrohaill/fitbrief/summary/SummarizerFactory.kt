@@ -46,6 +46,7 @@ class SummarizerFactory(private val context: Context) : SummaryService {
         if (events.isEmpty()) return events
         val summarizer = create(backend)
         return events.map { event ->
+            if (isTrivialWindow(event)) return@map event
             val insight = runCatching {
                 summarizer.summarizeTimeline(snapshot, event)
             }.getOrNull()
