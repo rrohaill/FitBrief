@@ -151,14 +151,16 @@ class FitBriefViewModel(
 
     fun openMetricDetail(metric: MetricType) {
         updateMetricDetail { MetricDetailUiState(metric = metric, insightLoading = true) }
-        if (metric == MetricType.HeartRate) {
-            val range = _uiState.value.selectedRange.toHealthRangeForOffset(0)
-            viewModelScope.launch {
-                runCatching { repository.readHeartRateSamples(range) }
-                    .onSuccess { samples -> updateMetricDetail { it.copy(heartRateSamples = samples) } }
-            }
+        if (metric != MetricType.HeartRate) {
+            generateMetricInsight()
+            return
         }
-        generateMetricInsight()
+        val range = _uiState.value.selectedRange.toHealthRangeForOffset(0)
+        viewModelScope.launch {
+            runCatching { repository.readHeartRateSamples(range) }
+                .onSuccess { samples -> updateMetricDetail { it.copy(heartRateSamples = samples) } }
+            generateMetricInsight()
+        }
     }
 
     fun closeMetricDetail() {
@@ -247,7 +249,7 @@ class FitBriefViewModel(
                     preferredBackend = current.activeBackend ?: current.selectedBackend,
                     snapshot = snapshot,
                     metric = metric,
-                    value = metricValue(snapshot, metric)
+                    value = metricValue(snapshot, metric, current)
                 )
             }.onSuccess { insight ->
                 updateMetricDetail { it.copy(insight = insight, insightLoading = false) }
@@ -262,9 +264,14 @@ class FitBriefViewModel(
         }
     }
 
-    private fun metricValue(snapshot: HealthSnapshot, metric: MetricType): String = when (metric) {
+    private fun metricValue(snapshot: HealthSnapshot, metric: MetricType, state: FitBriefUiState): String = when (metric) {
         MetricType.Steps -> "${snapshot.steps} steps"
-        MetricType.HeartRate -> "${snapshot.averageHeartRateBpm ?: "no average"} bpm average"
+        MetricType.HeartRate -> {
+            val samples = state.metricDetail.heartRateSamples.ifEmpty { state.timeline.flatMap { it.samples } }
+            val average = "${snapshot.averageHeartRateBpm ?: "no average"} bpm average"
+            if (samples.isEmpty()) average
+            else "$average, lowest ${samples.min().toInt()} bpm, highest ${samples.max().toInt()} bpm"
+        }
         MetricType.Sleep -> "${snapshot.sleepMinutes} minutes of sleep"
         MetricType.ActiveCalories -> "${snapshot.activeCaloriesKcal} active kcal"
         MetricType.Distance -> "${snapshot.distanceKilometers} km"

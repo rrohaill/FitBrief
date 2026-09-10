@@ -83,5 +83,6 @@ class PromptsTest {
         val prompt = metricPrompt(snapshot(), MetricType.HeartRate, "72 bpm average", Locale.US)
         assertFalse(prompt.contains("TARGET:"))
         assertFalse(prompt.contains("AVERAGE:"))
+        assertTrue(prompt.contains("lowest and highest readings"))
     }
 }

@@ -102,11 +102,17 @@ class FitBriefViewModelTest {
     }
 
     @Test
-    fun `opening heart rate also loads samples`() {
+    fun `opening heart rate loads samples and builds the insight from their range`() {
         val vm = viewModel()
+        vm.refresh()
         vm.openMetricDetail(MetricType.HeartRate)
         assertEquals(listOf(60.0, 90.0), vm.uiState.value.metricDetail.heartRateSamples)
         assertEquals(1, repository.heartRateRanges.size)
+        assertEquals(
+            MetricType.HeartRate to "70 bpm average, lowest 60 bpm, highest 90 bpm",
+            summaries.metricRequests.last()
+        )
+        assertEquals("Insight: 70 bpm average, lowest 60 bpm, highest 90 bpm", vm.uiState.value.metricDetail.insight)
     }
 
     @Test

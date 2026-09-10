@@ -135,7 +135,7 @@ fun metricPrompt(
             MetricType.Distance -> if (days > 1) add("DAILY AVERAGE: ${decimal.format(snapshot.distanceKilometers / days)} km")
             MetricType.ActiveCalories -> if (days > 1) add("DAILY AVERAGE: ${decimal.format(snapshot.activeCaloriesKcal / days)} kcal")
             MetricType.TotalCalories -> if (days > 1) add("DAILY AVERAGE: ${decimal.format(snapshot.totalCaloriesKcal / days)} kcal")
-            MetricType.HeartRate -> Unit
+            MetricType.HeartRate -> add("NOTE: describe the average and the spread between the lowest and highest readings; a wide spread during a day usually reflects periods of activity and rest")
         }
     }
     val lines = listOf(
