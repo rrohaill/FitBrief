@@ -2,6 +2,22 @@
 
 FitBrief is a Kotlin/Jetpack Compose MVVM Android app that turns Health Connect data into private, plain-language fitness summaries. Health data and AI inference stay on the device.
 
+## Screenshots
+
+| Today | Activity timeline | Week | Month |
+| --- | --- | --- | --- |
+| ![Today dashboard](docs/screenshots/01-dashboard-today.png) | ![AI activity timeline](docs/screenshots/02-dashboard-timeline.png) | ![Week dashboard](docs/screenshots/03-dashboard-week.png) | ![Month dashboard](docs/screenshots/04-dashboard-month.png) |
+
+| Heart rate detail | Steps detail | Sleep detail | Settings |
+| --- | --- | --- | --- |
+| ![Heart rate detail](docs/screenshots/05-heart-rate-detail.png) | ![Steps detail](docs/screenshots/06-steps-detail.png) | ![Sleep detail](docs/screenshots/07-sleep-detail.png) | ![Settings](docs/screenshots/08-settings.png) |
+
+## Demo
+
+![FitBrief demo](docs/demo/fitbrief-demo.gif)
+
+A higher-quality recording is in [docs/demo/fitbrief-demo.mp4](docs/demo/fitbrief-demo.mp4). Captured on a Pixel 10 Pro XL with Gemini Nano generating the summaries on device.
+
 ## Features
 
 - Health Connect availability detection with an install/update path when the provider is unavailable.
