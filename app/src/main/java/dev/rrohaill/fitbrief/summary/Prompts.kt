@@ -50,7 +50,7 @@ fun summaryPrompt(snapshot: HealthSnapshot, locale: Locale = Locale.getDefault()
     val period = snapshot.range.label.lowercase()
     val nextPeriod = when (snapshot.range.option) {
         RangeOption.Today -> "tomorrow"
-        RangeOption.SevenDays -> "next week"
+        RangeOption.Week -> "next week"
         RangeOption.Month -> "next month"
     }
     return """

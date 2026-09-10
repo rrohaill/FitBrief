@@ -93,7 +93,7 @@ fun buildMetricChartModel(
     val heartPeriodValues = when {
         isHeartRatePeriod -> dailySeries.map { it.second }
         metric == MetricType.HeartRate -> when (range) {
-            RangeOption.SevenDays -> DayOfWeek.entries.map { day ->
+            RangeOption.Week -> DayOfWeek.entries.map { day ->
                 timeline
                     .filter { it.timestamp.atZone(zoneId).dayOfWeek == day }
                     .mapNotNull { it.values[key]?.toFloat() }
@@ -163,7 +163,7 @@ fun buildMetricChartModel(
                 metricEvents.map { it.timestamp }.sorted()
             }
             val pattern = when (range) {
-                RangeOption.SevenDays -> "EEE"
+                RangeOption.Week -> "EEE"
                 RangeOption.Month -> "MMM d"
                 RangeOption.Today, null -> "h a"
             }

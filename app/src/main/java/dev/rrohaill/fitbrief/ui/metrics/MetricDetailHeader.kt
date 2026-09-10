@@ -6,7 +6,9 @@ import dev.rrohaill.fitbrief.data.TimelineEvent
 import dev.rrohaill.fitbrief.ui.MetricType
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
+import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.temporal.TemporalAdjusters
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -28,7 +30,7 @@ fun heartRateZone(bpm: Int): String = when {
 
 fun periodEndDate(range: RangeOption, dayOffset: Int, today: LocalDate): LocalDate = when (range) {
     RangeOption.Today -> today.minusDays(dayOffset.toLong())
-    RangeOption.SevenDays -> today.minusDays(dayOffset * 7L)
+    RangeOption.Week -> today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(dayOffset.toLong())
     RangeOption.Month -> today.minusMonths(dayOffset.toLong())
 }
 
@@ -48,7 +50,7 @@ fun buildMetricDetailHeader(
         drilldownDate.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", locale))
     } else when (selectedRange) {
         RangeOption.Today -> periodDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy", locale))
-        RangeOption.SevenDays -> "Week ending ${periodDate.format(DateTimeFormatter.ofPattern("MMM d", locale))}"
+        RangeOption.Week -> "Week of ${periodDate.format(DateTimeFormatter.ofPattern("MMM d", locale))}"
         RangeOption.Month -> periodDate.format(DateTimeFormatter.ofPattern("MMMM yyyy", locale))
     }
 

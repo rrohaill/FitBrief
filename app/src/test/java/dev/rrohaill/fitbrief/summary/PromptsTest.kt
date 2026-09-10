@@ -19,7 +19,7 @@ class PromptsTest {
 
     private fun snapshot(option: RangeOption = RangeOption.Today, steps: Long = 8_432, sleep: Long = 443, hr: Long? = 72) =
         HealthSnapshot(
-            HealthRange(option, if (option == RangeOption.SevenDays) start.minusSeconds(6 * 86_400) else start, start.plusSeconds(60)),
+            HealthRange(option, if (option == RangeOption.Week) start.minusSeconds(6 * 86_400) else start, start.plusSeconds(60)),
             steps, 6_240.0, 384.0, 1_820.0, 42, hr, sleep
         )
 
@@ -28,10 +28,10 @@ class PromptsTest {
 
     @Test
     fun `data lines list only present metrics with scaled targets`() {
-        val lines = snapshotDataLines(snapshot(RangeOption.SevenDays, steps = 35_000, sleep = 7 * 420, hr = null), Locale.US)
+        val lines = snapshotDataLines(snapshot(RangeOption.Week, steps = 35_000, sleep = 7 * 420, hr = null), Locale.US)
         assertEquals(
             """
-            |Range: 7 days (7 days)
+            |Range: Week (7 days)
             |Steps: 35,000 (target 70,000)
             |Distance: 6.2 km
             |Active calories burned: 384 kcal
@@ -75,8 +75,8 @@ class PromptsTest {
 
     @Test
     fun `metric prompt adds daily average and target for multi-day ranges`() {
-        val prompt = metricPrompt(snapshot(RangeOption.SevenDays, steps = 35_000), MetricType.Steps, "35000 steps", Locale.US)
-        assertTrue(prompt.contains("RANGE: 7 days (7 days)"))
+        val prompt = metricPrompt(snapshot(RangeOption.Week, steps = 35_000), MetricType.Steps, "35000 steps", Locale.US)
+        assertTrue(prompt.contains("RANGE: Week (7 days)"))
         assertTrue(prompt.contains("DAILY AVERAGE: 5,000 steps"))
         assertTrue(prompt.contains("TARGET: 10,000 steps per day"))
     }
@@ -91,7 +91,7 @@ class PromptsTest {
 
     @Test
     fun `calorie prompts state that calories are burned`() {
-        val prompt = metricPrompt(snapshot(RangeOption.SevenDays), MetricType.ActiveCalories, "384 kcal burned through activity", Locale.US)
+        val prompt = metricPrompt(snapshot(RangeOption.Week), MetricType.ActiveCalories, "384 kcal burned through activity", Locale.US)
         assertTrue(prompt.contains("DAILY AVERAGE: 54.9 kcal burned"))
         assertTrue(prompt.contains("not food eaten"))
         assertTrue(prompt.contains("never consumed"))

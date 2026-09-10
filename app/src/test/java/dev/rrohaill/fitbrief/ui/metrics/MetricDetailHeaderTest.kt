@@ -40,7 +40,7 @@ class MetricDetailHeaderTest {
 
     @Test
     fun `period label for a week and month range names the period end`() {
-        assertEquals("Week ending Sep 3", header(range = RangeOption.SevenDays, offset = 1).periodLabel)
+        assertEquals("Week of Aug 31", header(range = RangeOption.Week, offset = 1).periodLabel)
         assertEquals("August 2026", header(range = RangeOption.Month, offset = 1).periodLabel)
     }
 
@@ -48,7 +48,7 @@ class MetricDetailHeaderTest {
     fun `drilldown date overrides the period label`() {
         assertEquals(
             "Monday, September 7, 2026",
-            header(range = RangeOption.SevenDays, drilldown = LocalDate.of(2026, 9, 7)).periodLabel
+            header(range = RangeOption.Week, drilldown = LocalDate.of(2026, 9, 7)).periodLabel
         )
     }
 

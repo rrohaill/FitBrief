@@ -1,5 +1,6 @@
 package dev.rrohaill.fitbrief.data
 
+import java.time.DayOfWeek
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -18,7 +19,7 @@ enum class HealthConnectAvailability {
 
 enum class RangeOption(val label: String) {
     Today("Today"),
-    SevenDays("7 days"),
+    Week("Week"),
     Month("Month")
 }
 
@@ -85,7 +86,7 @@ fun RangeOption.toHealthRange(
     val today = LocalDate.now(zoneId)
     val startDate = when (this) {
         RangeOption.Today -> today
-        RangeOption.SevenDays -> today.minusDays(6)
+        RangeOption.Week -> today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         RangeOption.Month -> today.withDayOfMonth(1)
     }
 
@@ -118,7 +119,9 @@ fun RangeOption.toHealthRangeForOffset(
     val today = LocalDate.now(zoneId)
     val (startDate, endDate) = when (this) {
         RangeOption.Today -> today.minusDays(offset.toLong()).let { it to it }
-        RangeOption.SevenDays -> today.minusDays(offset * 7L).let { it.minusDays(6) to it }
+        RangeOption.Week -> today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(offset.toLong()).let {
+            it to it.plusDays(6)
+        }
         RangeOption.Month -> today.minusMonths(offset.toLong()).let {
             it.withDayOfMonth(1) to it.with(TemporalAdjusters.lastDayOfMonth())
         }

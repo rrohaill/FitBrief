@@ -32,11 +32,15 @@ class HealthRangeTest {
     }
 
     @Test
-    fun `week and day offsets are unchanged`() {
-        val week = RangeOption.SevenDays.toHealthRangeForOffset(1, now, zone)
-        assertEquals(day("2026-08-28"), week.start)
-        assertEquals(day("2026-09-04"), week.end)
+    fun `week runs Monday to Sunday and day offsets are unchanged`() {
+        val week = RangeOption.Week.toHealthRangeForOffset(1, now, zone)
+        assertEquals(day("2026-08-31"), week.start)
+        assertEquals(day("2026-09-07"), week.end)
         assertEquals(7, week.dayCount(zone))
+        val thisWeek = RangeOption.Week.toHealthRange(now, zone)
+        assertEquals(day("2026-09-07"), thisWeek.start)
+        assertEquals(now, thisWeek.end)
+        assertEquals(4, thisWeek.dayCount(zone))
         val yesterday = RangeOption.Today.toHealthRangeForOffset(1, now, zone)
         assertEquals(day("2026-09-09"), yesterday.start)
         assertEquals(day("2026-09-10"), yesterday.end)

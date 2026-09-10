@@ -38,7 +38,7 @@ class MetricChartTest {
             event(monday.plusDays(1), values = mapOf("sleep" to 400.0)),
             event(monday.plusDays(1), values = mapOf("steps" to 2000.0))
         )
-        val c = chart(MetricType.Steps, RangeOption.SevenDays, timeline)
+        val c = chart(MetricType.Steps, RangeOption.Week, timeline)
         assertEquals(listOf(1000f, 2000f, 3000f), c.values)
         assertEquals(listOf(monday, monday.plusDays(1), monday.plusDays(2)), c.barDates)
         assertEquals(listOf("Mon", "Tue", "Wed"), c.xLabels)
@@ -91,7 +91,7 @@ class MetricChartTest {
             event(monday, values = mapOf("heartRate" to 80.0)),
             event(monday.plusDays(2), values = mapOf("heartRate" to 90.0))
         )
-        val c = chart(MetricType.HeartRate, RangeOption.SevenDays, timeline)
+        val c = chart(MetricType.HeartRate, RangeOption.Week, timeline)
         assertFalse(c.isHeartRateToday)
         assertEquals(listOf(75f, 90f), c.heartPeriodValues)
         assertEquals(60f, c.yMin)

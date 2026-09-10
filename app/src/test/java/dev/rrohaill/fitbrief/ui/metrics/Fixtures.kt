@@ -26,7 +26,7 @@ internal fun snapshot(
         Instant.parse(
             when (option) {
                 RangeOption.Today -> "2026-09-08T00:00:00Z"
-                RangeOption.SevenDays -> "2026-09-02T00:00:00Z"
+                RangeOption.Week -> "2026-09-02T00:00:00Z"
                 RangeOption.Month -> "2026-09-01T00:00:00Z"
             }
         ),

@@ -49,7 +49,7 @@ class MetricCardsTest {
 
     @Test
     fun `steps goal scales with the range length`() {
-        val week = buildMetricCards(snapshot(RangeOption.SevenDays, steps = 35_000), locale = Locale.US).first()
+        val week = buildMetricCards(snapshot(RangeOption.Week, steps = 35_000), locale = Locale.US).first()
         assertEquals("50% of 70,000 goal", week.footer)
         val month = buildMetricCards(snapshot(RangeOption.Month, steps = 60_000), locale = Locale.US).first()
         assertEquals("75% of 80,000 goal", month.footer)

@@ -52,10 +52,10 @@ class FitBriefViewModelTest {
     @Test
     fun `refresh loads snapshot and summary for the selected range`() {
         val vm = viewModel()
-        vm.selectRange(RangeOption.SevenDays)
+        vm.selectRange(RangeOption.Week)
         val state = vm.uiState.value
-        assertEquals(RangeOption.SevenDays, state.selectedRange)
-        assertEquals(RangeOption.SevenDays, repository.snapshotRanges.last().option)
+        assertEquals(RangeOption.Week, state.selectedRange)
+        assertEquals(RangeOption.Week, repository.snapshotRanges.last().option)
         assertEquals(5_000L, state.snapshot?.steps)
         assertEquals("Summary of 5000 steps", state.summary)
         assertEquals(summaries.backend, state.activeBackend)
@@ -206,7 +206,7 @@ class FitBriefViewModelTest {
     fun `week detail loads daily totals for any metric`() {
         repository.dailyMetrics = listOf(dev.rrohaill.fitbrief.data.DailyHealthMetrics(LocalDate.now(), steps = 4_000))
         val vm = viewModel()
-        vm.selectRange(RangeOption.SevenDays)
+        vm.selectRange(RangeOption.Week)
         vm.openMetricDetail(MetricType.Steps)
         assertEquals(repository.dailyMetrics, vm.uiState.value.metricDetail.dailyMetrics)
         assertTrue(repository.heartRateRanges.isEmpty())

@@ -201,7 +201,7 @@ class HealthConnectRepository(private val context: Context) : HealthRepository {
         val sortedEvents = events.sortedByDescending(TimelineEvent::timestamp)
         return when (range.option) {
             RangeOption.Today -> sortedEvents.take(100)
-            RangeOption.SevenDays -> collapseTimelineByPeriod(
+            RangeOption.Week -> collapseTimelineByPeriod(
                 sortedEvents,
                 periodOf = { it.atZone(ZoneId.systemDefault()).toLocalDate() },
                 labelOf = { date -> date.format(DateTimeFormatter.ofPattern("EEEE, MMM d")) }
