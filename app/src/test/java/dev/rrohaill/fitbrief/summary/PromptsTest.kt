@@ -31,8 +31,8 @@ class PromptsTest {
             |Range: 7 days (7 days)
             |Steps: 35,000 (target 70,000)
             |Distance: 6.2 km
-            |Active calories: 384 kcal
-            |Total calories: 1,820 kcal
+            |Active calories burned: 384 kcal
+            |Total calories burned (including resting): 1,820 kcal
             |Exercise: 42 min (target 210)
             |Sleep: 49 h 0 min, about 7 h 0 min per night (target 7 to 9 h per night)
             """.trimMargin(),
@@ -57,7 +57,7 @@ class PromptsTest {
         assertTrue(prompt.contains("DURATION: 14 min"))
         assertTrue(prompt.contains("STEPS: 64"))
         assertTrue(prompt.contains("DISTANCE: 27 m"))
-        assertTrue(prompt.contains("ACTIVE CALORIES: 5 kcal"))
+        assertTrue(prompt.contains("ACTIVE CALORIES BURNED: 5 kcal"))
         assertTrue(prompt.contains("at most 25 words"))
         assertFalse(prompt.contains("Suggestion:"))
         assertFalse(prompt.contains("detail"))
@@ -84,5 +84,13 @@ class PromptsTest {
         assertFalse(prompt.contains("TARGET:"))
         assertFalse(prompt.contains("AVERAGE:"))
         assertTrue(prompt.contains("lowest and highest readings"))
+    }
+
+    @Test
+    fun `calorie prompts state that calories are burned`() {
+        val prompt = metricPrompt(snapshot(RangeOption.SevenDays), MetricType.ActiveCalories, "384 kcal burned through activity", Locale.US)
+        assertTrue(prompt.contains("DAILY AVERAGE: 54.9 kcal burned"))
+        assertTrue(prompt.contains("not food eaten"))
+        assertTrue(prompt.contains("never consumed"))
     }
 }

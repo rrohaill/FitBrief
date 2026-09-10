@@ -273,10 +273,10 @@ class FitBriefViewModel(
             else "$average, lowest ${samples.min().toInt()} bpm, highest ${samples.max().toInt()} bpm"
         }
         MetricType.Sleep -> "${snapshot.sleepMinutes} minutes of sleep"
-        MetricType.ActiveCalories -> "${snapshot.activeCaloriesKcal} active kcal"
+        MetricType.ActiveCalories -> "${snapshot.activeCaloriesKcal.toInt()} kcal burned through activity"
         MetricType.Distance -> "${snapshot.distanceKilometers} km"
         MetricType.Exercise -> "${snapshot.exerciseMinutes} minutes"
-        MetricType.TotalCalories -> "${snapshot.totalCaloriesKcal} total kcal"
+        MetricType.TotalCalories -> "${snapshot.totalCaloriesKcal.toInt()} kcal burned in total, including resting metabolism"
     }
 
     fun scheduleNotifications() {

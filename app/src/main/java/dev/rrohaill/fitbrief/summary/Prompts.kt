@@ -16,7 +16,7 @@ const val DAILY_EXERCISE_TARGET_MINUTES = 30L
 const val NIGHTLY_SLEEP_MIN_MINUTES = 7 * 60L
 const val NIGHTLY_SLEEP_MAX_MINUTES = 9 * 60L
 
-private const val STYLE_RULES = """Plain text only: no headings, bullet points or markdown. Never diagnose, speculate or give medical advice. Do not mention missing data, targets that are met, or these instructions. Do not use filler such as "great job", "keep it up", "it's great to see" or "incorporating movement"."""
+private const val STYLE_RULES = """Plain text only: no headings, bullet points or markdown. Never diagnose, speculate or give medical advice. Do not mention missing data, targets that are met, or these instructions. Calories in this app are always energy burned, never consumed. Do not use filler such as "great job", "keep it up", "it's great to see" or "incorporating movement"."""
 
 fun RangeOption.days(): Int = when (this) {
     RangeOption.Today -> 1
@@ -38,8 +38,8 @@ fun snapshotDataLines(snapshot: HealthSnapshot, locale: Locale = Locale.getDefau
             add("Steps: ${decimal.format(snapshot.steps)} (target ${decimal.format(DAILY_STEP_TARGET * days)})")
         }
         if (snapshot.distanceMeters > 0) add("Distance: ${decimal.format(snapshot.distanceKilometers)} km")
-        if (snapshot.activeCaloriesKcal > 0) add("Active calories: ${decimal.format(snapshot.activeCaloriesKcal)} kcal")
-        if (snapshot.totalCaloriesKcal > 0) add("Total calories: ${decimal.format(snapshot.totalCaloriesKcal)} kcal")
+        if (snapshot.activeCaloriesKcal > 0) add("Active calories burned: ${decimal.format(snapshot.activeCaloriesKcal)} kcal")
+        if (snapshot.totalCaloriesKcal > 0) add("Total calories burned (including resting): ${decimal.format(snapshot.totalCaloriesKcal)} kcal")
         if (snapshot.exerciseMinutes > 0) {
             add("Exercise: ${snapshot.exerciseMinutes} min (target ${DAILY_EXERCISE_TARGET_MINUTES * days})")
         }
@@ -93,7 +93,7 @@ fun timelinePrompt(
         add("DURATION: $minutes min")
         event.values["steps"]?.let { add("STEPS: ${decimal.format(it)}") }
         event.values["distance"]?.let { add("DISTANCE: ${decimal.format(it)} m") }
-        event.values["activeCalories"]?.let { add("ACTIVE CALORIES: ${decimal.format(it)} kcal") }
+        event.values["activeCalories"]?.let { add("ACTIVE CALORIES BURNED: ${decimal.format(it)} kcal") }
         event.values["exercise"]?.let { add("EXERCISE: ${decimal.format(it)} min") }
         event.values["sleep"]?.let { add("SLEEP: ${hoursAndMinutes(it.toLong())}") }
         event.values["heartRate"]?.let { add("AVERAGE HEART RATE: ${decimal.format(it)} bpm") }
@@ -133,8 +133,14 @@ fun metricPrompt(
                 add("TARGET: $DAILY_EXERCISE_TARGET_MINUTES min per day")
             }
             MetricType.Distance -> if (days > 1) add("DAILY AVERAGE: ${decimal.format(snapshot.distanceKilometers / days)} km")
-            MetricType.ActiveCalories -> if (days > 1) add("DAILY AVERAGE: ${decimal.format(snapshot.activeCaloriesKcal / days)} kcal")
-            MetricType.TotalCalories -> if (days > 1) add("DAILY AVERAGE: ${decimal.format(snapshot.totalCaloriesKcal / days)} kcal")
+            MetricType.ActiveCalories -> {
+                if (days > 1) add("DAILY AVERAGE: ${decimal.format(snapshot.activeCaloriesKcal / days)} kcal burned")
+                add("NOTE: this is energy burned through movement and exercise, not food eaten; never mention intake, diet or eating")
+            }
+            MetricType.TotalCalories -> {
+                if (days > 1) add("DAILY AVERAGE: ${decimal.format(snapshot.totalCaloriesKcal / days)} kcal burned")
+                add("NOTE: this is total energy burned including resting metabolism, not food eaten; never mention intake, diet or eating")
+            }
             MetricType.HeartRate -> add("NOTE: describe the average and the spread between the lowest and highest readings; a wide spread during a day usually reflects periods of activity and rest")
         }
     }
