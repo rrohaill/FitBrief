@@ -36,7 +36,8 @@ class MainActivity : ComponentActivity() {
                     healthPermissionLauncher.launch(viewModel.requiredPermissions)
                 },
                 onOpenHealthConnect = ::openHealthConnect,
-                onScheduleNotifications = ::scheduleNotifications
+                onScheduleNotifications = ::scheduleNotifications,
+                onShareSummary = ::shareSummary
             )
         }
     }
@@ -55,6 +56,14 @@ class MainActivity : ComponentActivity() {
         } else {
             viewModel.scheduleNotifications()
         }
+    }
+
+    private fun shareSummary(text: String) {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        startActivity(Intent.createChooser(send, "Share FitBrief summary"))
     }
 
     private fun openHealthConnect() {

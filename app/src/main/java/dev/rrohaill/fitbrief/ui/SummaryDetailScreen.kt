@@ -1,6 +1,5 @@
 package dev.rrohaill.fitbrief.ui
 
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -32,22 +30,10 @@ internal fun SummaryDetailScreen(
     state: FitBriefUiState,
     onRefresh: () -> Unit,
     onClose: () -> Unit,
+    onShare: () -> Unit,
     onOpenMetricDetail: (MetricType) -> Unit = {}
 ) {
     val snapshot = state.snapshot
-    val context = LocalContext.current
-    val shareText = buildString {
-        appendLine("FitBrief ${state.selectedRange.label} summary")
-        appendLine()
-        appendLine(state.summary.ifBlank { "AI summary is not available yet." })
-        if (state.timeline.isNotEmpty()) {
-            appendLine()
-            appendLine("Activity timeline")
-            state.timeline.forEach { event ->
-                appendLine("${event.title}: ${event.detail}")
-            }
-        }
-    }
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(
             modifier = Modifier
@@ -90,17 +76,7 @@ internal fun SummaryDetailScreen(
                         MaterialTheme.colorScheme.surfaceContainer,
                         MaterialTheme.colorScheme.onSurface,
                         40.dp,
-                        onClick = {
-                            context.startActivity(
-                                Intent.createChooser(
-                                    Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_TEXT, shareText)
-                                    },
-                                    "Share FitBrief summary"
-                                )
-                            )
-                        }
+                        onClick = onShare
                     )
                 }
             }
@@ -159,7 +135,7 @@ private fun SummaryLightPreview() {
             FitBriefUiState(
                 snapshot = previewSnapshot(),
                 summary = "You recorded a balanced day of movement and recovery."
-            ), {}, {})
+            ), {}, {}, {})
     }
 }
 
@@ -171,6 +147,6 @@ private fun SummaryDarkPreview() {
             FitBriefUiState(
                 snapshot = previewSnapshot(),
                 summary = "You recorded a balanced day of movement and recovery."
-            ), {}, {})
+            ), {}, {}, {})
     }
 }

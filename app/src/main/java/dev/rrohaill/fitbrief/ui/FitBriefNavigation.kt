@@ -43,10 +43,7 @@ fun FitBriefNavigation(
             DashboardScreen(
                 state = state,
                 onRefresh = { onEvent(FitBriefEvent.Refresh) },
-                onOpenSettings = {
-                    onEvent(FitBriefEvent.OpenSettings)
-                    navController.navigate("settings")
-                },
+                onOpenSettings = { navController.navigate("settings") },
                 onSelectRange = { onEvent(FitBriefEvent.SelectRange(it)) },
                 onScheduleNotifications = { onEvent(FitBriefEvent.ScheduleNotifications) },
                 onOpenMetricDetail = { metric ->
@@ -59,10 +56,8 @@ fun FitBriefNavigation(
             SummaryDetailScreen(
                 state = state,
                 onRefresh = { onEvent(FitBriefEvent.Refresh) },
-                onClose = {
-                    onEvent(FitBriefEvent.CloseSummary)
-                    navController.popBackStack()
-                },
+                onClose = { navController.popBackStack() },
+                onShare = { onEvent(FitBriefEvent.ShareSummary) },
                 onOpenMetricDetail = { metric ->
                     onEvent(FitBriefEvent.OpenMetric(metric))
                     navController.navigate("metric/${metric.name}")
@@ -72,10 +67,7 @@ fun FitBriefNavigation(
         composable("settings") {
             SettingsScreen(
                 state = state,
-                onBack = {
-                    onEvent(FitBriefEvent.CloseSettings)
-                    navController.popBackStack()
-                },
+                onBack = { navController.popBackStack() },
                 onOpenHealthConnect = { onEvent(FitBriefEvent.OpenHealthConnect) },
                 onToggleDailySummary = { onEvent(FitBriefEvent.ToggleDailySummary) },
                 onToggleWeeklyReport = { onEvent(FitBriefEvent.ToggleWeeklyReport) },

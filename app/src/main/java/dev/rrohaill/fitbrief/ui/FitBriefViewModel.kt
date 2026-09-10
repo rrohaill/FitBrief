@@ -40,13 +40,11 @@ data class FitBriefUiState(
     val timeline: List<TimelineEvent> = emptyList(),
     val metricHeartRateSamples: List<Double> = emptyList(),
     val summary: String = "",
-    val showSummaryDetail: Boolean = false,
     val selectedMetric: MetricType? = null,
     val metricDayOffset: Int = 0,
     val metricDrilldownDate: LocalDate? = null,
     val metricInsight: String? = null,
     val metricInsightLoading: Boolean = false,
-    val showSettings: Boolean = false,
     val dailySummaryEnabled: Boolean = true,
     val weeklyReportEnabled: Boolean = false,
     val dailySummaryTimeMinutes: Int = 8 * 60,
@@ -123,22 +121,7 @@ class FitBriefViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(selectedBackend = backend, backendProgress = null) }
     }
 
-    fun generateSummary() {
-        _uiState.update {
-            it.copy(
-                showSummaryDetail = true,
-                snapshot = null,
-                timeline = emptyList(),
-                summary = "",
-                activeBackend = null,
-                backendProgress = null,
-                message = null
-            )
-        }
-        refresh(openDetail = true)
-    }
-
-    fun refresh(openDetail: Boolean = false) {
+    fun refresh() {
         viewModelScope.launch {
             val current = _uiState.value
             val status = runCatching { repository.permissionStatus() }.getOrElse { error ->
@@ -184,7 +167,6 @@ class FitBriefViewModel(application: Application) : AndroidViewModel(application
                         timeline = timeline,
                         summary = summary.text,
                         activeBackend = summary.backend,
-                        showSummaryDetail = openDetail,
                         isLoading = false
                     )
                 }
@@ -203,10 +185,6 @@ class FitBriefViewModel(application: Application) : AndroidViewModel(application
     fun scheduleNotifications() {
         FitBriefWorkScheduler.schedule(getApplication<Application>().applicationContext)
         _uiState.update { it.copy(notificationsScheduled = true, message = "Daily summary notification scheduled.") }
-    }
-
-    fun closeSummaryDetail() {
-        _uiState.update { it.copy(showSummaryDetail = false) }
     }
 
     fun openMetricDetail(metric: MetricType) {
@@ -368,14 +346,6 @@ class FitBriefViewModel(application: Application) : AndroidViewModel(application
                 MetricType.TotalCalories -> "${snapshot.totalCaloriesKcal} total kcal"
     }
 
-    fun openSettings() {
-        _uiState.update { it.copy(showSettings = true) }
-    }
-
-    fun closeSettings() {
-        _uiState.update { it.copy(showSettings = false) }
-    }
-
     fun toggleDailySummary() {
         val enabled = !_uiState.value.dailySummaryEnabled
         preferences.setDailySummaryEnabled(enabled)
@@ -403,6 +373,9 @@ class FitBriefViewModel(application: Application) : AndroidViewModel(application
         preferences.setWeeklyReportDayOfWeek(dayOfWeek)
         _uiState.update { it.copy(weeklyReportDayOfWeek = dayOfWeek) }
     }
+
+    /** Plain-text version of the current summary for the system share sheet. */
+    fun summaryShareText(): String = buildSummaryShareText(_uiState.value)
 
     fun showSettingsNotice(message: String) {
         _uiState.update { it.copy(settingsNotice = message) }

@@ -11,7 +11,8 @@ fun FitBriefApp(
     viewModel: FitBriefViewModel,
     onRequestHealthPermissions: () -> Unit,
     onOpenHealthConnect: () -> Unit,
-    onScheduleNotifications: () -> Unit
+    onScheduleNotifications: () -> Unit,
+    onShareSummary: (String) -> Unit
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
     val onEvent: (FitBriefEvent) -> Unit = { event ->
@@ -19,10 +20,7 @@ fun FitBriefApp(
             FitBriefEvent.RequestHealthPermissions -> onRequestHealthPermissions()
             FitBriefEvent.OpenHealthConnect -> onOpenHealthConnect()
             FitBriefEvent.Refresh -> viewModel.refresh()
-            FitBriefEvent.GenerateSummary -> viewModel.generateSummary()
-            FitBriefEvent.CloseSummary -> viewModel.closeSummaryDetail()
-            FitBriefEvent.OpenSettings -> viewModel.openSettings()
-            FitBriefEvent.CloseSettings -> viewModel.closeSettings()
+            FitBriefEvent.ShareSummary -> onShareSummary(viewModel.summaryShareText())
             FitBriefEvent.ToggleDailySummary -> viewModel.toggleDailySummary()
             FitBriefEvent.ToggleWeeklyReport -> viewModel.toggleWeeklyReport()
             is FitBriefEvent.SetDailySummaryTime -> viewModel.setDailySummaryTime(event.minutes)

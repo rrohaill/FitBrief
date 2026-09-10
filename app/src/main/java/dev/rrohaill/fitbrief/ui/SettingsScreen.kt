@@ -388,7 +388,7 @@ private fun SettingSwitch(enabled: Boolean, onClick: () -> Unit) {
 private fun SettingsLightPreview() {
     PreviewSurface(false) {
         SettingsScreen(
-            state = FitBriefUiState(showSettings = true),
+            state = FitBriefUiState(),
             onBack = {},
             onOpenHealthConnect = {},
             onToggleDailySummary = {},
@@ -408,7 +408,7 @@ private fun SettingsLightPreview() {
 private fun SettingsDarkPreview() {
     PreviewSurface(true) {
         SettingsScreen(
-            state = FitBriefUiState(showSettings = true),
+            state = FitBriefUiState(),
             onBack = {},
             onOpenHealthConnect = {},
             onToggleDailySummary = {},
