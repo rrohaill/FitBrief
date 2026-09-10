@@ -255,9 +255,10 @@ class HealthConnectRepository(private val context: Context) : HealthRepository {
             .toList()
             .sortedByDescending { it.first }
             .map { (period, periodEvents) ->
-                val counts = periodEvents.groupingBy { it.title }.eachCount()
+                val notableEvents = periodEvents.notable()
+                val counts = notableEvents.groupingBy { it.title }.eachCount()
                     .entries.joinToString(", ") { "${it.key} (${it.value})" }
-                val highlights = periodEvents.map { it.detail }.distinct().take(3)
+                val highlights = notableEvents.map { it.detail }.distinct().take(3)
                     .joinToString(" ")
                 val metricValues = periodEvents.flatMap { it.values.entries }
                     .groupBy { it.key }
@@ -268,7 +269,7 @@ class HealthConnectRepository(private val context: Context) : HealthRepository {
                 TimelineEvent(
                     timestamp = period.atStartOfDay(zone).toInstant(),
                     title = labelOf(period),
-                    detail = "$counts. $highlights",
+                    detail = if (notableEvents.isEmpty()) "Only brief movement was recorded." else "$counts. $highlights",
                     icon = "◷",
                     periodLabel = labelOf(period),
                     values = metricValues

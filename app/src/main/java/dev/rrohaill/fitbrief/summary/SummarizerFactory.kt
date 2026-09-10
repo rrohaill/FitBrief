@@ -2,6 +2,7 @@ package dev.rrohaill.fitbrief.summary
 
 import android.content.Context
 import dev.rrohaill.fitbrief.data.HealthSnapshot
+import dev.rrohaill.fitbrief.data.isTrivial
 import dev.rrohaill.fitbrief.data.TimelineEvent
 import dev.rrohaill.fitbrief.ui.MetricType
 
@@ -46,7 +47,7 @@ class SummarizerFactory(private val context: Context) : SummaryService {
         if (events.isEmpty()) return events
         val summarizer = create(backend)
         return events.map { event ->
-            if (isTrivialWindow(event)) return@map event
+            if (event.isTrivial()) return@map event
             val insight = runCatching {
                 summarizer.summarizeTimeline(snapshot, event)
             }.getOrNull()

@@ -45,6 +45,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import dev.rrohaill.fitbrief.data.RangeOption
+import dev.rrohaill.fitbrief.data.notable
 import dev.rrohaill.fitbrief.ui.components.AiPulseBackground
 import dev.rrohaill.fitbrief.ui.components.Badge
 import dev.rrohaill.fitbrief.ui.components.MetricGrid
@@ -170,14 +171,15 @@ internal fun DashboardScreen(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                if (state.timeline.isEmpty()) {
+                val notableTimeline = remember(state.timeline) { state.timeline.notable() }
+                if (notableTimeline.isEmpty()) {
                     Text(
-                        "No timestamped activity is available for this range.",
+                        "No notable activity is available for this range.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    state.timeline.forEach { event ->
+                    notableTimeline.forEach { event ->
                         TimelineEventCard(event)
                     }
                 }

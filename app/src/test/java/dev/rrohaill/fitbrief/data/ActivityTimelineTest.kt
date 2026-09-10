@@ -60,4 +60,25 @@ class ActivityTimelineTest {
         )
         assertTrue(events.isEmpty())
     }
+
+    private fun window(minutes: Long, values: Map<String, Double>) =
+        TimelineEvent(t0, "Walking activity", "", "♧", at(minutes), values = values)
+
+    @Test
+    fun `short or small walking windows are trivial and filtered from notable`() {
+        val trivial = listOf(
+            window(1, mapOf("steps" to 11.0)),
+            window(25, mapOf("steps" to 120.0, "distance" to 80.0)),
+            window(5, mapOf("heartRate" to 70.0))
+        )
+        val notable = listOf(
+            window(25, mapOf("steps" to 1_800.0)),
+            window(15, mapOf("heartRate" to 70.0)),
+            window(3, mapOf("exercise" to 3.0)),
+            window(3, mapOf("sleep" to 3.0))
+        )
+        assertTrue(trivial.all { it.isTrivial() })
+        assertTrue(notable.none { it.isTrivial() })
+        assertEquals(notable, (trivial + notable).notable())
+    }
 }

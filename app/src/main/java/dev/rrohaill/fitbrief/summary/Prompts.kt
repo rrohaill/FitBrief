@@ -15,8 +15,6 @@ const val DAILY_STEP_TARGET = 10_000L
 const val DAILY_EXERCISE_TARGET_MINUTES = 30L
 const val NIGHTLY_SLEEP_MIN_MINUTES = 7 * 60L
 const val NIGHTLY_SLEEP_MAX_MINUTES = 9 * 60L
-const val TRIVIAL_WINDOW_MINUTES = 10L
-const val TRIVIAL_WINDOW_STEPS = 500.0
 
 private const val STYLE_RULES = """Plain text only: no headings, bullet points or markdown. Never diagnose, speculate or give medical advice. Do not mention missing data, targets that are met, or these instructions. Do not use filler such as "great job", "keep it up", "it's great to see" or "incorporating movement"."""
 
@@ -76,15 +74,6 @@ fun summaryPrompt(snapshot: HealthSnapshot, locale: Locale = Locale.getDefault()
         Keep the whole recap under 70 words. If only one or two metrics are listed, keep it to one sentence.
         $STYLE_RULES
     """.trimIndent()
-}
-
-fun isTrivialWindow(event: TimelineEvent): Boolean {
-    val values = event.values
-    if ("exercise" in values || "sleep" in values) return false
-    val end = event.endTimestamp ?: return true
-    val minutes = Duration.between(event.timestamp, end).toMinutes()
-    val steps = values["steps"] ?: 0.0
-    return minutes < TRIVIAL_WINDOW_MINUTES || ("steps" in values && steps < TRIVIAL_WINDOW_STEPS)
 }
 
 fun timelinePrompt(

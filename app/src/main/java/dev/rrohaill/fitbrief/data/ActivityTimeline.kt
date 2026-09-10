@@ -10,6 +10,18 @@ data class ActivityMeasurement(
 )
 
 const val ACTIVITY_GAP_MINUTES = 10L
+const val NOTABLE_WINDOW_MINUTES = 10L
+const val NOTABLE_WINDOW_STEPS = 500.0
+
+fun TimelineEvent.isTrivial(): Boolean {
+    if ("exercise" in values || "sleep" in values) return false
+    val end = endTimestamp ?: return true
+    val minutes = Duration.between(timestamp, end).toMinutes()
+    val steps = values["steps"] ?: 0.0
+    return minutes < NOTABLE_WINDOW_MINUTES || ("steps" in values && steps < NOTABLE_WINDOW_STEPS)
+}
+
+fun List<TimelineEvent>.notable(): List<TimelineEvent> = filterNot { it.isTrivial() }
 
 fun groupIntoWindows(
     measurements: List<ActivityMeasurement>,

@@ -51,21 +51,6 @@ class PromptsTest {
     }
 
     @Test
-    fun `short or small walking windows are trivial`() {
-        assertTrue(isTrivialWindow(window(1, mapOf("steps" to 11.0))))
-        assertTrue(isTrivialWindow(window(25, mapOf("steps" to 120.0, "distance" to 80.0))))
-        assertTrue(isTrivialWindow(window(5, mapOf("heartRate" to 70.0))))
-        assertFalse(isTrivialWindow(window(25, mapOf("steps" to 1_800.0))))
-        assertFalse(isTrivialWindow(window(15, mapOf("heartRate" to 70.0))))
-    }
-
-    @Test
-    fun `sessions are never trivial`() {
-        assertFalse(isTrivialWindow(window(3, mapOf("exercise" to 3.0))))
-        assertFalse(isTrivialWindow(window(3, mapOf("sleep" to 3.0))))
-    }
-
-    @Test
     fun `timeline prompt uses local times and raw values`() {
         val prompt = timelinePrompt(window(14, mapOf("steps" to 64.0, "distance" to 27.0, "activeCalories" to 5.0)), zone, Locale.US)
         assertTrue(prompt.contains("LOCAL TIME: 12:01 PM to 12:15 PM on Thursday, Sep 10"))
