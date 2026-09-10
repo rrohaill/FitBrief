@@ -10,7 +10,6 @@ import dev.rrohaill.fitbrief.notifications.WorkManagerNotificationScheduler
 import dev.rrohaill.fitbrief.summary.SummarizerFactory
 import dev.rrohaill.fitbrief.summary.SummaryService
 
-/** Hand-rolled dependency graph. One instance lives on [FitBriefApplication]. */
 class AppContainer(context: Context) {
     private val appContext = context.applicationContext
     val healthRepository: HealthRepository by lazy { HealthConnectRepository(appContext) }

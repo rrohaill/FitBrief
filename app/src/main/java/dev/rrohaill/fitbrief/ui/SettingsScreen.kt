@@ -1,6 +1,5 @@
 package dev.rrohaill.fitbrief.ui
 
-import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,15 +19,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -37,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -47,6 +49,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SettingsScreen(
     settings: SettingsUiState,
@@ -66,7 +69,6 @@ internal fun SettingsScreen(
     var refreshDialog by remember { mutableStateOf(false) }
     var timePickerTarget by remember { mutableStateOf<String?>(null) }
     var weeklyDayDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(
             modifier = Modifier
@@ -202,34 +204,35 @@ internal fun SettingsScreen(
         )
     }
     timePickerTarget?.let { target ->
-        val minutes =
-            if (target == "daily") settings.dailySummaryTimeMinutes else settings.weeklyReportTimeMinutes
-        val dialog = remember(target, minutes) {
-            TimePickerDialog(
-                context,
-                { _, hour, minute ->
-                    val selectedMinutes = hour * 60 + minute
-                    if (target == "daily") {
-                        onSetDailySummaryTime(selectedMinutes)
-                        onToggleDailySummary()
-                    } else {
-                        onSetWeeklyReportTime(selectedMinutes)
-                        onToggleWeeklyReport()
-                    }
-                    timePickerTarget = null
+        key(target) {
+            val minutes =
+                if (target == "daily") settings.dailySummaryTimeMinutes else settings.weeklyReportTimeMinutes
+            val pickerState = rememberTimePickerState(
+                initialHour = minutes / 60,
+                initialMinute = minutes % 60,
+                is24Hour = false
+            )
+            AlertDialog(
+                onDismissRequest = { timePickerTarget = null },
+                title = { Text(if (target == "daily") "Daily summary time" else "Weekly report time") },
+                text = { TimePicker(state = pickerState) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val selectedMinutes = pickerState.hour * 60 + pickerState.minute
+                        if (target == "daily") {
+                            onSetDailySummaryTime(selectedMinutes)
+                            onToggleDailySummary()
+                        } else {
+                            onSetWeeklyReportTime(selectedMinutes)
+                            onToggleWeeklyReport()
+                        }
+                        timePickerTarget = null
+                    }) { Text("OK") }
                 },
-                minutes / 60,
-                minutes % 60,
-                false
-            ).apply {
-                setOnCancelListener { timePickerTarget = null }
-            }
-        }
-        DisposableEffect(dialog) {
-            dialog.show()
-            onDispose {
-                dialog.dismiss()
-            }
+                dismissButton = {
+                    TextButton(onClick = { timePickerTarget = null }) { Text("Cancel") }
+                }
+            )
         }
     }
     SettingsDialogs(

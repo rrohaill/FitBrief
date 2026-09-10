@@ -52,18 +52,6 @@ fun FitBriefNavigation(
                 }
             )
         }
-        composable("summary") {
-            SummaryDetailScreen(
-                state = state,
-                onRefresh = { onEvent(FitBriefEvent.Refresh) },
-                onClose = { navController.popBackStack() },
-                onShare = { onEvent(FitBriefEvent.ShareSummary) },
-                onOpenMetricDetail = { metric ->
-                    onEvent(FitBriefEvent.OpenMetric(metric))
-                    navController.navigate("metric/${metric.name}")
-                }
-            )
-        }
         composable("settings") {
             SettingsScreen(
                 settings = state.settings,

@@ -1,6 +1,5 @@
 package dev.rrohaill.fitbrief.data
 
-/** Persisted user settings. Implemented by [FitBriefPreferences] on SharedPreferences; faked in tests. */
 interface FitBriefPreferencesStore {
     fun themeMode(): ThemeMode
     fun setThemeMode(mode: ThemeMode)

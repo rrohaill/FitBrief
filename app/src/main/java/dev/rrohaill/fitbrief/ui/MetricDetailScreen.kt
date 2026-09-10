@@ -63,6 +63,7 @@ internal fun MetricDetailScreen(
     val timeline = state.timeline
     val graphLoading = snapshot == null
     var selectedBarDate by remember(metric, state.metricDetail.drilldownDate) { mutableStateOf<LocalDate?>(null) }
+    val canPageForward = state.metricDetail.drilldownDate?.isBefore(LocalDate.now()) ?: (state.metricDetail.dayOffset > 0)
     val header = remember(metric, snapshot, timeline, state.metricDetail.heartRateSamples, state.selectedRange, state.metricDetail.dayOffset, state.metricDetail.drilldownDate) {
         buildMetricDetailHeader(
             metric = metric,
@@ -106,10 +107,10 @@ internal fun MetricDetailScreen(
                     "›",
                     MaterialTheme.colorScheme.surfaceContainer,
                     MaterialTheme.colorScheme.onSurface.copy(
-                        alpha = if (state.metricDetail.dayOffset == 0) 0.35f else 1f
+                        alpha = if (canPageForward) 1f else 0.35f
                     ),
                     40.dp,
-                    onClick = { if (state.metricDetail.dayOffset > 0) onNavigateDay(-1) }
+                    onClick = { if (canPageForward) onNavigateDay(-1) }
                 )
             }
             Card(

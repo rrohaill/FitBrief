@@ -31,7 +31,6 @@ class FitBriefViewModel(
     private val summaryService: SummaryService,
     private val scheduler: NotificationScheduler
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(
         FitBriefUiState(
             settings = SettingsUiState(
@@ -58,8 +57,6 @@ class FitBriefViewModel(
     private inline fun updateMetricDetail(transform: (MetricDetailUiState) -> MetricDetailUiState) =
         _uiState.update { it.copy(metricDetail = transform(it.metricDetail)) }
 
-    // region Permissions
-
     fun refreshPermissionStatus() {
         viewModelScope.launch {
             runCatching { repository.permissionStatus() }
@@ -80,10 +77,6 @@ class FitBriefViewModel(
         }
         refreshOnAppOpen()
     }
-
-    // endregion
-
-    // region Dashboard summary
 
     fun selectRange(option: RangeOption) {
         _uiState.update {
@@ -156,13 +149,6 @@ class FitBriefViewModel(
         }
     }
 
-    /** Plain-text version of the current summary for the system share sheet. */
-    fun summaryShareText(): String = buildSummaryShareText(_uiState.value)
-
-    // endregion
-
-    // region Metric detail
-
     fun openMetricDetail(metric: MetricType) {
         updateMetricDetail { MetricDetailUiState(metric = metric, insightLoading = true) }
         if (metric == MetricType.HeartRate) {
@@ -181,7 +167,6 @@ class FitBriefViewModel(
             updateMetricDetail { it.copy(metric = null) }
             return
         }
-        // Leaving a drilled-down day returns to the period that was being browsed.
         loadMetricPeriod(
             range = current.selectedRange.toHealthRangeForOffset(current.metricDetail.dayOffset),
             errorMessage = "Unable to return to this range."
@@ -197,6 +182,16 @@ class FitBriefViewModel(
 
     fun navigateMetricDay(delta: Int) {
         val current = _uiState.value
+        val drilldownDate = current.metricDetail.drilldownDate
+        if (drilldownDate != null) {
+            val nextDate = drilldownDate.minusDays(delta.toLong())
+            if (nextDate.isAfter(LocalDate.now())) return
+            loadMetricPeriod(
+                range = RangeOption.Today.toHealthRangeForDate(nextDate),
+                errorMessage = "Unable to load this day."
+            ) { it.copy(drilldownDate = nextDate) }
+            return
+        }
         val nextOffset = (current.metricDetail.dayOffset + delta).coerceAtLeast(0)
         if (nextOffset == current.metricDetail.dayOffset) return
         loadMetricPeriod(
@@ -205,10 +200,6 @@ class FitBriefViewModel(
         ) { it.copy(dayOffset = nextOffset) }
     }
 
-    /**
-     * Replaces the snapshot and timeline with the data for [range], then regenerates the metric insight.
-     * [prepare] applies the navigation change (offset or drill-down date) before loading.
-     */
     private fun loadMetricPeriod(
         range: HealthRange,
         errorMessage: String,
@@ -281,10 +272,6 @@ class FitBriefViewModel(
         MetricType.TotalCalories -> "${snapshot.totalCaloriesKcal} total kcal"
     }
 
-    // endregion
-
-    // region Settings & notifications
-
     fun scheduleNotifications() {
         scheduler.schedule()
         _uiState.update { it.copy(notificationsScheduled = true, message = "Daily summary notification scheduled.") }
@@ -336,8 +323,6 @@ class FitBriefViewModel(
     fun dismissSettingsNotice() {
         updateSettings { it.copy(notice = null) }
     }
-
-    // endregion
 
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {

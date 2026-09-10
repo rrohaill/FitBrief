@@ -153,6 +153,32 @@ class FitBriefViewModelTest {
     }
 
     @Test
+    fun `paging while drilled into a day moves the drilldown date`() {
+        val vm = viewModel()
+        vm.openMetricDetail(MetricType.Steps)
+        vm.openMetricDate(LocalDate.of(2026, 9, 3))
+        vm.navigateMetricDay(1)
+        assertEquals(LocalDate.of(2026, 9, 2), vm.uiState.value.metricDetail.drilldownDate)
+        assertEquals(0, vm.uiState.value.metricDetail.dayOffset)
+        val loaded = repository.snapshotRanges.last()
+        assertEquals(LocalDate.of(2026, 9, 2), loaded.start.atZone(java.time.ZoneId.systemDefault()).toLocalDate())
+
+        vm.navigateMetricDay(-1)
+        assertEquals(LocalDate.of(2026, 9, 3), vm.uiState.value.metricDetail.drilldownDate)
+    }
+
+    @Test
+    fun `paging a drilled-down day past today is ignored`() {
+        val vm = viewModel()
+        vm.openMetricDetail(MetricType.Steps)
+        vm.openMetricDate(LocalDate.now())
+        val before = repository.snapshotRanges.size
+        vm.navigateMetricDay(-1)
+        assertEquals(LocalDate.now(), vm.uiState.value.metricDetail.drilldownDate)
+        assertEquals(before, repository.snapshotRanges.size)
+    }
+
+    @Test
     fun `changing the refresh interval persists it and reschedules work`() {
         val vm = viewModel()
         vm.setRefreshInterval(RefreshInterval.TwoHours)

@@ -10,7 +10,6 @@ sealed interface FitBriefEvent {
     data object RequestHealthPermissions : FitBriefEvent
     data object OpenHealthConnect : FitBriefEvent
     data object Refresh : FitBriefEvent
-    data object ShareSummary : FitBriefEvent
     data object ToggleDailySummary : FitBriefEvent
     data object ToggleWeeklyReport : FitBriefEvent
     data class SetDailySummaryTime(val minutes: Int) : FitBriefEvent

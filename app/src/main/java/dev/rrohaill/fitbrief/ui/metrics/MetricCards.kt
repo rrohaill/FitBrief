@@ -14,7 +14,6 @@ enum class MetricCardGraph {
     None
 }
 
-/** Presentation model for one tile in the dashboard metric grid. Free of Compose types so it is unit testable. */
 data class MetricCardModel(
     val type: MetricType,
     val title: String,
@@ -35,7 +34,6 @@ fun RangeOption?.dayCount(): Int = when (this) {
     RangeOption.Today, null -> 1
 }
 
-/** Builds the metric tiles shown for [snapshot]. Metrics with no data for the range are omitted. */
 fun buildMetricCards(
     snapshot: HealthSnapshot?,
     showGraphs: Boolean = true,

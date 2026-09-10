@@ -4,7 +4,6 @@ import dev.rrohaill.fitbrief.data.HealthSnapshot
 import dev.rrohaill.fitbrief.data.TimelineEvent
 import dev.rrohaill.fitbrief.ui.MetricType
 
-/** Produces AI summaries for health data. Implemented by [SummarizerFactory]; faked in tests. */
 interface SummaryService {
     suspend fun summarize(
         preferredBackend: SummarizerBackend,

@@ -15,21 +15,16 @@ import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 import kotlin.math.ceil
 
-/** Everything the metric detail chart needs to draw, computed once per data change rather than per frame. */
 data class MetricChartModel(
     val metric: MetricType,
     val range: RangeOption?,
     val title: String,
-    /** Series plotted by the bar and trend graphs. Never empty. */
     val values: List<Float>,
-    /** Date behind each entry of [values]; index-aligned when the series comes from timeline events. */
     val barDates: List<LocalDate>,
-    /** Per-weekday or per-week heart-rate averages for the multi-day heart-rate graph. */
     val heartPeriodValues: List<Float>,
     val yMin: Float,
     val yMax: Float,
     val yUnit: String,
-    /** Y-axis tick labels, top to bottom. */
     val yAxisLabels: List<String>,
     val xLabels: List<String>,
     val footnote: String?
@@ -37,7 +32,6 @@ data class MetricChartModel(
     val isHeartRateToday: Boolean get() = metric == MetricType.HeartRate && range == RangeOption.Today
 }
 
-/** Key under which a metric's per-event value is stored in [TimelineEvent.values]. */
 val MetricType.timelineKey: String
     get() = when (this) {
         MetricType.Steps -> "steps"

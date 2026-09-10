@@ -10,7 +10,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-/** Header values for the metric detail screen: which period is shown and the headline figure. */
 data class MetricDetailHeader(
     val periodLabel: String,
     val value: String,
@@ -27,7 +26,6 @@ fun heartRateZone(bpm: Int): String = when {
     else -> "Light"
 }
 
-/** The end date of the period that is [dayOffset] periods before today for [range]. */
 fun periodEndDate(range: RangeOption, dayOffset: Int, today: LocalDate): LocalDate =
     today.minusDays(
         when (range) {

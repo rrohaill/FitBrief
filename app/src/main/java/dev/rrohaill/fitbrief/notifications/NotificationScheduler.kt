@@ -2,7 +2,6 @@ package dev.rrohaill.fitbrief.notifications
 
 import android.content.Context
 
-/** Schedules the periodic summary notification. Faked in tests. */
 interface NotificationScheduler {
     fun schedule(intervalMinutes: Long = DEFAULT_INTERVAL_MINUTES)
 

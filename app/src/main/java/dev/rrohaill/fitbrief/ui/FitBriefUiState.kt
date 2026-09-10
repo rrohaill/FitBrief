@@ -11,7 +11,6 @@ import dev.rrohaill.fitbrief.summary.BackendProgress
 import dev.rrohaill.fitbrief.summary.SummarizerBackend
 import java.time.LocalDate
 
-/** Everything the settings screen shows and edits. */
 data class SettingsUiState(
     val dailySummaryEnabled: Boolean = true,
     val weeklyReportEnabled: Boolean = false,
@@ -20,16 +19,12 @@ data class SettingsUiState(
     val weeklyReportDayOfWeek: Int = 1,
     val themeMode: ThemeMode = ThemeMode.System,
     val refreshInterval: RefreshInterval = RefreshInterval.FourHours,
-    /** Title and body separated by a newline, shown in a dialog until dismissed. */
     val notice: String? = null
 )
 
-/** Navigation position and AI insight for the metric detail screen. The data itself is the shared snapshot/timeline. */
 data class MetricDetailUiState(
     val metric: MetricType? = null,
-    /** How many periods (days, weeks or months depending on the range) before today are shown. */
     val dayOffset: Int = 0,
-    /** Set while a single day has been opened from a multi-day chart. */
     val drilldownDate: LocalDate? = null,
     val heartRateSamples: List<Double> = emptyList(),
     val insight: String? = null,
@@ -47,7 +42,6 @@ data class FitBriefUiState(
     val selectedBackend: SummarizerBackend = SummarizerBackend.MlKitPrompt,
     val activeBackend: SummarizerBackend? = null,
     val backendProgress: BackendProgress? = null,
-    /** Data for the currently displayed period; shared by the dashboard, summary and metric detail screens. */
     val snapshot: HealthSnapshot? = null,
     val timeline: List<TimelineEvent> = emptyList(),
     val summary: String = "",
