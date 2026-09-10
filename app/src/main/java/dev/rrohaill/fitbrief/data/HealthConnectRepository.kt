@@ -44,18 +44,6 @@ class HealthConnectRepository(private val context: Context) : HealthRepository {
 
     }
 
-    private fun adaptiveActivityGapMinutes(starts: List<Instant>, ends: List<Instant>): Long {
-        if (starts.size < 2) return 1L
-        val gaps = starts.zipWithNext()
-            .mapIndexed { index, (current, next) ->
-                Duration.between(maxOf(current, ends[index]), next).toMinutes().coerceAtLeast(0)
-            }
-            .filter { it > 0 }
-            .sorted()
-        if (gaps.isEmpty()) return 1L
-        return (gaps[gaps.size / 2] * 2).coerceAtLeast(1L)
-    }
-
     override suspend fun permissionStatus(): PermissionStatus {
         val availability = availability()
         if (availability != HealthConnectAvailability.Available) {
@@ -134,48 +122,6 @@ class HealthConnectRepository(private val context: Context) : HealthRepository {
     override suspend fun readTimeline(range: HealthRange): List<TimelineEvent> {
         val granted = client().permissionController.getGrantedPermissions()
         val events = mutableListOf<TimelineEvent>()
-        data class ActivityMeasurement(
-            val start: Instant,
-            val end: Instant,
-            val value: Double
-        )
-        fun appendGroupedMeasurements(
-            measurements: List<ActivityMeasurement>,
-            title: String,
-            icon: String,
-            valueKey: String,
-            detail: (Double, Long) -> String
-        ) {
-            var window: MutableList<ActivityMeasurement> = mutableListOf()
-            val activityGap = adaptiveActivityGapMinutes(
-                measurements.map { it.start },
-                measurements.map { it.end }
-            )
-            fun flush() {
-                if (window.isEmpty()) return
-                val start = window.first().start
-                val end = window.maxOf(ActivityMeasurement::end)
-                val total = window.sumOf(ActivityMeasurement::value)
-                val minutes = Duration.between(start, end).toWholeMinutes().coerceAtLeast(1)
-                events += TimelineEvent(
-                    start,
-                    title,
-                    detail(total, minutes),
-                    icon,
-                    end,
-                    values = mapOf(valueKey to total)
-                )
-                window = mutableListOf()
-            }
-            measurements.sortedBy(ActivityMeasurement::start).forEach { measurement ->
-                val gap = window.lastOrNull()?.let {
-                    Duration.between(it.end, measurement.start).toMinutes()
-                } ?: 0
-                if (window.isNotEmpty() && gap > activityGap) flush()
-                window += measurement
-            }
-            flush()
-        }
         val sleepRange = HealthRange(
             option = range.option,
             start = range.start.minusSeconds(24 * 60 * 60),
@@ -196,86 +142,31 @@ class HealthConnectRepository(private val context: Context) : HealthRepository {
             }
 
         }
-        if (permissionsFor(StepsRecord::class) in granted) {
-            val records = readAll<StepsRecord>(range).filter { it.count > 0 }
-            var start: Instant? = null
-            var end: Instant? = null
-            var count = 0L
-            val activityGap = adaptiveActivityGapMinutes(
-                records.map { it.startTime },
-                records.map { it.endTime }
-            )
-            fun flush() {
-                val windowStart = start ?: return
-                val windowEnd = end ?: windowStart
-                val minutes = Duration.between(windowStart, windowEnd).toWholeMinutes().coerceAtLeast(1)
-                events += TimelineEvent(
-                    windowStart,
-                    "Walking activity",
-                    "You logged $count steps over about $minutes minutes. This looks like a sustained movement window rather than isolated readings.",
-                    "♧",
-                    windowEnd,
-                    values = mapOf("steps" to count.toDouble())
-                )
-                start = null
-                end = null
-                count = 0
+        suspend fun <T : Record> activity(
+            recordClass: kotlin.reflect.KClass<T>,
+            records: suspend () -> List<T>,
+            measure: (T) -> ActivityMeasurement
+        ): List<ActivityMeasurement> =
+            if (permissionsFor(recordClass) in granted) records().map(measure).filter { it.value > 0.0 } else emptyList()
+
+        events += buildActivityWindows(
+            steps = activity(StepsRecord::class, { readAll<StepsRecord>(range) }) {
+                ActivityMeasurement(it.startTime, it.endTime, it.count.toDouble())
+            },
+            distance = activity(DistanceRecord::class, { readAll<DistanceRecord>(range) }) {
+                ActivityMeasurement(it.startTime, it.endTime, it.distance.inMeters)
+            },
+            activeCalories = activity(ActiveCaloriesBurnedRecord::class, { readAll<ActiveCaloriesBurnedRecord>(range) }) {
+                ActivityMeasurement(it.startTime, it.endTime, it.energy.inKilocalories)
+            },
+            totalCalories = activity(TotalCaloriesBurnedRecord::class, { readAll<TotalCaloriesBurnedRecord>(range) }) {
+                ActivityMeasurement(it.startTime, it.endTime, it.energy.inKilocalories)
             }
-            records.forEach { record ->
-                val gap = end?.let { Duration.between(it, record.startTime).toMinutes() } ?: 0
-                if (start != null && gap > activityGap) flush()
-                if (start == null) start = record.startTime
-                end = maxOf(end ?: record.endTime, record.endTime)
-                count += record.count
-            }
-            flush()
-        }
-        if (permissionsFor(DistanceRecord::class) in granted) {
-            val measurements = readAll<DistanceRecord>(range)
-                .filter { it.distance.inMeters > 0.0 }
-                .map { ActivityMeasurement(it.startTime, it.endTime, it.distance.inMeters) }
-            appendGroupedMeasurements(
-                measurements,
-                "Walking distance",
-                "⌁",
-                "distance"
-            ) { meters, minutes ->
-                "You covered ${meters.toInt()} meters over about $minutes minutes in this activity window."
-            }
-        }
-        if (permissionsFor(ActiveCaloriesBurnedRecord::class) in granted) {
-            val measurements = readAll<ActiveCaloriesBurnedRecord>(range)
-                .filter { it.energy.inKilocalories > 0.0 }
-                .map { ActivityMeasurement(it.startTime, it.endTime, it.energy.inKilocalories) }
-            appendGroupedMeasurements(
-                measurements,
-                "Active energy",
-                "♨",
-                "activeCalories"
-            ) { calories, minutes ->
-                "You burned ${calories.toInt()} active calories over about $minutes minutes in this activity window."
-            }
-        }
-        if (permissionsFor(TotalCaloriesBurnedRecord::class) in granted) {
-            val measurements = readAll<TotalCaloriesBurnedRecord>(range)
-                .filter { it.energy.inKilocalories > 0.0 }
-                .map { ActivityMeasurement(it.startTime, it.endTime, it.energy.inKilocalories) }
-            appendGroupedMeasurements(
-                measurements,
-                "Total energy",
-                "◈",
-                "totalCalories"
-            ) { calories, minutes ->
-                "You recorded ${calories.toInt()} total calories over about $minutes minutes in this activity window."
-            }
-        }
+        )
         if (permissionsFor(HeartRateRecord::class) in granted) {
             val samples = readAll<HeartRateRecord>(range).flatMap { it.samples }.sortedBy { it.time }
             var window = mutableListOf<HeartRateRecord.Sample>()
-            val activityGap = adaptiveActivityGapMinutes(
-                samples.map { it.time },
-                samples.map { it.time }
-            )
+            val activityGap = ACTIVITY_GAP_MINUTES
             fun flushHeartRate() {
                 if (window.isEmpty()) return
                 val first = window.first()
