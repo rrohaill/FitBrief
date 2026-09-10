@@ -18,60 +18,60 @@ enum class RefreshInterval(val minutes: Int, val label: String) {
     Daily(1440, "Once a day")
 }
 
-class FitBriefPreferences(context: Context) {
+class FitBriefPreferences(context: Context) : FitBriefPreferencesStore {
     private val preferences = context.getSharedPreferences("fitbrief_preferences", Context.MODE_PRIVATE)
 
-    fun themeMode(): ThemeMode =
+    override fun themeMode(): ThemeMode =
         preferences.getString("theme_mode", ThemeMode.System.name)
             ?.let { value -> ThemeMode.entries.firstOrNull { it.name == value } }
             ?: ThemeMode.System
 
-    fun setThemeMode(mode: ThemeMode) {
+    override fun setThemeMode(mode: ThemeMode) {
         preferences.edit { putString("theme_mode", mode.name) }
     }
 
-    fun refreshInterval(): RefreshInterval {
+    override fun refreshInterval(): RefreshInterval {
         val storedMinutes = preferences.getInt("refresh_interval_minutes", 240)
         return RefreshInterval.entries.firstOrNull { it.minutes == storedMinutes }
             ?: RefreshInterval.FourHours
     }
 
-    fun setRefreshInterval(interval: RefreshInterval) {
+    override fun setRefreshInterval(interval: RefreshInterval) {
         preferences.edit { putInt("refresh_interval_minutes", interval.minutes) }
     }
 
-    fun dailySummaryTimeMinutes(): Int =
+    override fun dailySummaryTimeMinutes(): Int =
         preferences.getInt("daily_summary_time_minutes", 8 * 60)
 
-    fun setDailySummaryTimeMinutes(minutes: Int) {
+    override fun setDailySummaryTimeMinutes(minutes: Int) {
         preferences.edit { putInt("daily_summary_time_minutes", minutes) }
     }
 
-    fun weeklyReportTimeMinutes(): Int =
+    override fun weeklyReportTimeMinutes(): Int =
         preferences.getInt("weekly_report_time_minutes", 8 * 60)
 
-    fun setWeeklyReportTimeMinutes(minutes: Int) {
+    override fun setWeeklyReportTimeMinutes(minutes: Int) {
         preferences.edit { putInt("weekly_report_time_minutes", minutes) }
     }
 
-    fun weeklyReportDayOfWeek(): Int =
+    override fun weeklyReportDayOfWeek(): Int =
         preferences.getInt("weekly_report_day_of_week", 1)
 
-    fun setWeeklyReportDayOfWeek(dayOfWeek: Int) {
+    override fun setWeeklyReportDayOfWeek(dayOfWeek: Int) {
         preferences.edit { putInt("weekly_report_day_of_week", dayOfWeek.coerceIn(1, 7)) }
     }
 
-    fun dailySummaryEnabled(): Boolean =
+    override fun dailySummaryEnabled(): Boolean =
         preferences.getBoolean("daily_summary_enabled", true)
 
-    fun setDailySummaryEnabled(enabled: Boolean) {
+    override fun setDailySummaryEnabled(enabled: Boolean) {
         preferences.edit { putBoolean("daily_summary_enabled", enabled) }
     }
 
-    fun weeklyReportEnabled(): Boolean =
+    override fun weeklyReportEnabled(): Boolean =
         preferences.getBoolean("weekly_report_enabled", false)
 
-    fun setWeeklyReportEnabled(enabled: Boolean) {
+    override fun setWeeklyReportEnabled(enabled: Boolean) {
         preferences.edit { putBoolean("weekly_report_enabled", enabled) }
     }
 }

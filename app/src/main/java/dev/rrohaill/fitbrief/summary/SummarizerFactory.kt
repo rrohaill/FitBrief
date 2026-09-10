@@ -5,8 +5,8 @@ import dev.rrohaill.fitbrief.data.HealthSnapshot
 import dev.rrohaill.fitbrief.data.TimelineEvent
 import dev.rrohaill.fitbrief.ui.MetricType
 
-class SummarizerFactory(private val context: Context) {
-    suspend fun summarize(
+class SummarizerFactory(private val context: Context) : SummaryService {
+    override suspend fun summarize(
         preferredBackend: SummarizerBackend,
         snapshot: HealthSnapshot,
         onProgress: (BackendProgress) -> Unit,
@@ -38,7 +38,7 @@ class SummarizerFactory(private val context: Context) {
         error("No summarizer backend available: ${failures.joinToString()}")
     }
 
-    suspend fun summarizeTimeline(
+    override suspend fun summarizeTimeline(
         backend: SummarizerBackend,
         snapshot: HealthSnapshot,
         events: List<TimelineEvent>
@@ -53,7 +53,7 @@ class SummarizerFactory(private val context: Context) {
         }
     }
 
-    suspend fun summarizeMetric(
+    override suspend fun summarizeMetric(
         preferredBackend: SummarizerBackend,
         snapshot: HealthSnapshot,
         metric: MetricType,

@@ -17,7 +17,9 @@ import dev.rrohaill.fitbrief.ui.FitBriefApp
 import dev.rrohaill.fitbrief.ui.FitBriefViewModel
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: FitBriefViewModel by viewModels()
+    private val viewModel: FitBriefViewModel by viewModels {
+        FitBriefViewModel.factory((application as FitBriefApplication).container)
+    }
 
     private val healthPermissionLauncher = registerForActivityResult(
         PermissionController.createRequestPermissionResultContract()

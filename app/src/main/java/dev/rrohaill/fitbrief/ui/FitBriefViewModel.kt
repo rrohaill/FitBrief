@@ -1,24 +1,28 @@
 package dev.rrohaill.fitbrief.ui
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.viewModelScope
+import dev.rrohaill.fitbrief.AppContainer
+import dev.rrohaill.fitbrief.data.FitBriefPreferencesStore
 import dev.rrohaill.fitbrief.data.HealthConnectAvailability
-import dev.rrohaill.fitbrief.data.HealthConnectRepository
+import dev.rrohaill.fitbrief.data.HealthRange
+import dev.rrohaill.fitbrief.data.HealthRepository
 import dev.rrohaill.fitbrief.data.HealthSnapshot
-import dev.rrohaill.fitbrief.data.TimelineEvent
-import dev.rrohaill.fitbrief.data.FitBriefPreferences
-import dev.rrohaill.fitbrief.data.RefreshInterval
 import dev.rrohaill.fitbrief.data.PermissionStatus
 import dev.rrohaill.fitbrief.data.RangeOption
+import dev.rrohaill.fitbrief.data.RefreshInterval
 import dev.rrohaill.fitbrief.data.ThemeMode
+import dev.rrohaill.fitbrief.data.TimelineEvent
 import dev.rrohaill.fitbrief.data.toHealthRange
 import dev.rrohaill.fitbrief.data.toHealthRangeForDate
 import dev.rrohaill.fitbrief.data.toHealthRangeForOffset
-import dev.rrohaill.fitbrief.notifications.FitBriefWorkScheduler
+import dev.rrohaill.fitbrief.notifications.NotificationScheduler
 import dev.rrohaill.fitbrief.summary.BackendProgress
 import dev.rrohaill.fitbrief.summary.SummarizerBackend
-import dev.rrohaill.fitbrief.summary.SummarizerFactory
+import dev.rrohaill.fitbrief.summary.SummaryService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -58,10 +62,12 @@ data class FitBriefUiState(
     val notificationsScheduled: Boolean = false
 )
 
-class FitBriefViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = HealthConnectRepository(application.applicationContext)
-    private val preferences = FitBriefPreferences(application.applicationContext)
-    private val summarizerFactory = SummarizerFactory(application.applicationContext)
+class FitBriefViewModel(
+    private val repository: HealthRepository,
+    private val preferences: FitBriefPreferencesStore,
+    private val summaryService: SummaryService,
+    private val scheduler: NotificationScheduler
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
         FitBriefUiState(
@@ -80,6 +86,8 @@ class FitBriefViewModel(application: Application) : AndroidViewModel(application
     init {
         refreshPermissionStatus()
     }
+
+    // region Permissions
 
     fun refreshPermissionStatus() {
         viewModelScope.launch {
@@ -101,6 +109,10 @@ class FitBriefViewModel(application: Application) : AndroidViewModel(application
         }
         refreshOnAppOpen()
     }
+
+    // endregion
+
+    // region Dashboard summary
 
     fun selectRange(option: RangeOption) {
         _uiState.update {
@@ -137,27 +149,18 @@ class FitBriefViewModel(application: Application) : AndroidViewModel(application
 
             _uiState.update { it.copy(isLoading = true, message = null, backendProgress = null) }
             runCatching {
-                val snapshot = repository.readSnapshot(current.selectedRange.toHealthRange())
-                val timeline = repository.readTimeline(current.selectedRange.toHealthRange())
-                _uiState.update {
-                    it.copy(
-                        snapshot = snapshot,
-                        timeline = timeline,
-                        message = null
-                    )
-                }
-                val summary = summarizerFactory.summarize(
+                val range = current.selectedRange.toHealthRange()
+                val snapshot = repository.readSnapshot(range)
+                val timeline = repository.readTimeline(range)
+                _uiState.update { it.copy(snapshot = snapshot, timeline = timeline, message = null) }
+                val summary = summaryService.summarize(
                     preferredBackend = current.selectedBackend,
                     snapshot = snapshot,
                     onProgress = { progress -> _uiState.update { it.copy(backendProgress = progress) } },
                     onBackendFallback = { note -> _uiState.update { it.copy(message = note) } }
                 )
                 val enrichedTimeline = runCatching {
-                    summarizerFactory.summarizeTimeline(
-                        backend = summary.backend,
-                        snapshot = snapshot,
-                        events = timeline
-                    )
+                    summaryService.summarizeTimeline(summary.backend, snapshot, timeline)
                 }.getOrDefault(timeline)
                 Triple(snapshot, enrichedTimeline, summary)
             }.onSuccess { (snapshot, timeline, summary) ->
@@ -182,10 +185,12 @@ class FitBriefViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun scheduleNotifications() {
-        FitBriefWorkScheduler.schedule(getApplication<Application>().applicationContext)
-        _uiState.update { it.copy(notificationsScheduled = true, message = "Daily summary notification scheduled.") }
-    }
+    /** Plain-text version of the current summary for the system share sheet. */
+    fun summaryShareText(): String = buildSummaryShareText(_uiState.value)
+
+    // endregion
+
+    // region Metric detail
 
     fun openMetricDetail(metric: MetricType) {
         _uiState.update {
@@ -210,86 +215,45 @@ class FitBriefViewModel(application: Application) : AndroidViewModel(application
 
     fun closeMetricDetail() {
         val current = _uiState.value
-        if (current.metricDrilldownDate != null) {
-            _uiState.update {
-                it.copy(
-                    metricDrilldownDate = null,
-                    snapshot = null,
-                    timeline = emptyList(),
-                    isLoading = true,
-                    metricInsight = null,
-                    metricInsightLoading = true
-                )
-            }
-            viewModelScope.launch {
-                runCatching {
-                    val range = current.selectedRange.toHealthRangeForOffset(current.metricDayOffset)
-                        Triple(
-                            repository.readSnapshot(range),
-                            repository.readTimeline(range),
-                            repository.readHeartRateSamples(range)
-                        )
-                }.onSuccess { (snapshot, timeline, heartRateSamples) ->
-                    _uiState.update {
-                        it.copy(
-                            snapshot = snapshot,
-                            timeline = timeline,
-                            metricHeartRateSamples = heartRateSamples,
-                            isLoading = false
-                        )
-                    }
-                    generateMetricInsight()
-                }.onFailure { error ->
-                    _uiState.update { it.copy(isLoading = false, message = error.message ?: "Unable to return to this range.") }
-                }
-            }
+        if (current.metricDrilldownDate == null) {
+            _uiState.update { it.copy(selectedMetric = null) }
             return
         }
-        _uiState.update { it.copy(selectedMetric = null) }
+        // Leaving a drilled-down day returns to the period that was being browsed.
+        loadMetricPeriod(
+            range = current.selectedRange.toHealthRangeForOffset(current.metricDayOffset),
+            errorMessage = "Unable to return to this range."
+        ) { it.copy(metricDrilldownDate = null) }
     }
 
     fun openMetricDate(date: LocalDate) {
-        _uiState.update {
-            it.copy(
-                metricDrilldownDate = date,
-                snapshot = null,
-                timeline = emptyList(),
-                isLoading = true,
-                metricInsight = null,
-                metricInsightLoading = true
-            )
-        }
-        viewModelScope.launch {
-            runCatching {
-                val range = RangeOption.Today.toHealthRangeForDate(date)
-            Triple(
-                repository.readSnapshot(range),
-                repository.readTimeline(range),
-                repository.readHeartRateSamples(range)
-            )
-            }.onSuccess { (snapshot, timeline, heartRateSamples) ->
-            _uiState.update {
-                it.copy(
-                    snapshot = snapshot,
-                    timeline = timeline,
-                    metricHeartRateSamples = heartRateSamples,
-                    isLoading = false
-                )
-            }
-                generateMetricInsight()
-            }.onFailure { error ->
-                _uiState.update { it.copy(isLoading = false, message = error.message ?: "Unable to load that day.") }
-            }
-        }
+        loadMetricPeriod(
+            range = RangeOption.Today.toHealthRangeForDate(date),
+            errorMessage = "Unable to load that day."
+        ) { it.copy(metricDrilldownDate = date) }
     }
 
     fun navigateMetricDay(delta: Int) {
         val current = _uiState.value
         val nextOffset = (current.metricDayOffset + delta).coerceAtLeast(0)
         if (nextOffset == current.metricDayOffset) return
+        loadMetricPeriod(
+            range = current.selectedRange.toHealthRangeForOffset(nextOffset),
+            errorMessage = "Unable to load this day."
+        ) { it.copy(metricDayOffset = nextOffset) }
+    }
+
+    /**
+     * Replaces the snapshot and timeline with the data for [range], then regenerates the metric insight.
+     * [prepare] applies the navigation change (offset or drill-down date) to the state before loading.
+     */
+    private fun loadMetricPeriod(
+        range: HealthRange,
+        errorMessage: String,
+        prepare: (FitBriefUiState) -> FitBriefUiState
+    ) {
         _uiState.update {
-            it.copy(
-                metricDayOffset = nextOffset,
+            prepare(it).copy(
                 snapshot = null,
                 timeline = emptyList(),
                 isLoading = true,
@@ -299,58 +263,77 @@ class FitBriefViewModel(application: Application) : AndroidViewModel(application
         }
         viewModelScope.launch {
             runCatching {
-                val range = current.selectedRange.toHealthRangeForOffset(nextOffset)
-                repository.readSnapshot(range) to repository.readTimeline(range)
-            }.onSuccess { (snapshot, timeline) ->
-                _uiState.update { it.copy(snapshot = snapshot, timeline = timeline, isLoading = false) }
+                val heartRateSamples = if (_uiState.value.selectedMetric == MetricType.HeartRate) {
+                    repository.readHeartRateSamples(range)
+                } else {
+                    emptyList()
+                }
+                Triple(repository.readSnapshot(range), repository.readTimeline(range), heartRateSamples)
+            }.onSuccess { (snapshot, timeline, heartRateSamples) ->
+                _uiState.update {
+                    it.copy(
+                        snapshot = snapshot,
+                        timeline = timeline,
+                        metricHeartRateSamples = heartRateSamples,
+                        isLoading = false
+                    )
+                }
                 generateMetricInsight()
             }.onFailure { error ->
-                _uiState.update { it.copy(isLoading = false, message = error.message ?: "Unable to load this day.") }
+                _uiState.update { it.copy(isLoading = false, message = error.message ?: errorMessage) }
             }
         }
     }
 
     private fun generateMetricInsight() {
-                viewModelScope.launch {
-                    val current = _uiState.value
-                    val snapshot = current.snapshot ?: return@launch
-                    val metric = current.selectedMetric ?: return@launch
-                    val value = metricValue(snapshot, metric)
-                    runCatching {
-                        summarizerFactory.summarizeMetric(
-                            preferredBackend = current.activeBackend ?: current.selectedBackend,
-                            snapshot = snapshot,
-                            metric = metric,
-                            value = value
-                        )
-                    }.onSuccess { insight ->
-                        _uiState.update { it.copy(metricInsight = insight, metricInsightLoading = false) }
-                    }.onFailure { error ->
-                        _uiState.update {
-                            it.copy(
-                                metricInsightLoading = false,
-                                message = error.message ?: "Unable to generate metric insight."
-                            )
-                        }
-                    }
+        viewModelScope.launch {
+            val current = _uiState.value
+            val snapshot = current.snapshot ?: return@launch
+            val metric = current.selectedMetric ?: return@launch
+            runCatching {
+                summaryService.summarizeMetric(
+                    preferredBackend = current.activeBackend ?: current.selectedBackend,
+                    snapshot = snapshot,
+                    metric = metric,
+                    value = metricValue(snapshot, metric)
+                )
+            }.onSuccess { insight ->
+                _uiState.update { it.copy(metricInsight = insight, metricInsightLoading = false) }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        metricInsightLoading = false,
+                        message = error.message ?: "Unable to generate metric insight."
+                    )
                 }
+            }
+        }
     }
 
     private fun metricValue(snapshot: HealthSnapshot, metric: MetricType): String = when (metric) {
-                MetricType.Steps -> "${snapshot.steps} steps"
-                MetricType.HeartRate -> "${snapshot.averageHeartRateBpm ?: "no average"} bpm average"
-                MetricType.Sleep -> "${snapshot.sleepMinutes} minutes of sleep"
-                MetricType.ActiveCalories -> "${snapshot.activeCaloriesKcal} active kcal"
-                MetricType.Distance -> "${snapshot.distanceKilometers} km"
-                MetricType.Exercise -> "${snapshot.exerciseMinutes} minutes"
-                MetricType.TotalCalories -> "${snapshot.totalCaloriesKcal} total kcal"
+        MetricType.Steps -> "${snapshot.steps} steps"
+        MetricType.HeartRate -> "${snapshot.averageHeartRateBpm ?: "no average"} bpm average"
+        MetricType.Sleep -> "${snapshot.sleepMinutes} minutes of sleep"
+        MetricType.ActiveCalories -> "${snapshot.activeCaloriesKcal} active kcal"
+        MetricType.Distance -> "${snapshot.distanceKilometers} km"
+        MetricType.Exercise -> "${snapshot.exerciseMinutes} minutes"
+        MetricType.TotalCalories -> "${snapshot.totalCaloriesKcal} total kcal"
+    }
+
+    // endregion
+
+    // region Settings & notifications
+
+    fun scheduleNotifications() {
+        scheduler.schedule()
+        _uiState.update { it.copy(notificationsScheduled = true, message = "Daily summary notification scheduled.") }
     }
 
     fun toggleDailySummary() {
         val enabled = !_uiState.value.dailySummaryEnabled
         preferences.setDailySummaryEnabled(enabled)
         _uiState.update { it.copy(dailySummaryEnabled = enabled) }
-        if (_uiState.value.dailySummaryEnabled) scheduleNotifications()
+        if (enabled) scheduleNotifications()
     }
 
     fun toggleWeeklyReport() {
@@ -374,13 +357,6 @@ class FitBriefViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(weeklyReportDayOfWeek = dayOfWeek) }
     }
 
-    /** Plain-text version of the current summary for the system share sheet. */
-    fun summaryShareText(): String = buildSummaryShareText(_uiState.value)
-
-    fun showSettingsNotice(message: String) {
-        _uiState.update { it.copy(settingsNotice = message) }
-    }
-
     fun setThemeMode(mode: ThemeMode) {
         preferences.setThemeMode(mode)
         _uiState.update { it.copy(themeMode = mode) }
@@ -389,10 +365,29 @@ class FitBriefViewModel(application: Application) : AndroidViewModel(application
     fun setRefreshInterval(interval: RefreshInterval) {
         preferences.setRefreshInterval(interval)
         _uiState.update { it.copy(refreshInterval = interval) }
-        FitBriefWorkScheduler.schedule(getApplication(), interval.minutes.toLong())
+        scheduler.schedule(interval.minutes.toLong())
+    }
+
+    fun showSettingsNotice(message: String) {
+        _uiState.update { it.copy(settingsNotice = message) }
     }
 
     fun dismissSettingsNotice() {
         _uiState.update { it.copy(settingsNotice = null) }
+    }
+
+    // endregion
+
+    companion object {
+        fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                FitBriefViewModel(
+                    repository = container.healthRepository,
+                    preferences = container.preferences,
+                    summaryService = container.summaryService,
+                    scheduler = container.notificationScheduler
+                )
+            }
+        }
     }
 }

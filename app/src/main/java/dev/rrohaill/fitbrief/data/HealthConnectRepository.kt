@@ -21,8 +21,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 
-class HealthConnectRepository(private val context: Context) {
-    val permissions: Set<String> = setOf(
+class HealthConnectRepository(private val context: Context) : HealthRepository {
+    override val permissions: Set<String> = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
         HealthPermission.getReadPermission(DistanceRecord::class),
         HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
@@ -56,7 +56,7 @@ class HealthConnectRepository(private val context: Context) {
         return (gaps[gaps.size / 2] * 2).coerceAtLeast(1L)
     }
 
-    suspend fun permissionStatus(): PermissionStatus {
+    override suspend fun permissionStatus(): PermissionStatus {
         val availability = availability()
         if (availability != HealthConnectAvailability.Available) {
             return PermissionStatus(availability, granted = false, grantedCount = 0, requiredCount = permissions.size)
@@ -73,7 +73,7 @@ class HealthConnectRepository(private val context: Context) {
         )
     }
 
-    suspend fun readSnapshot(range: HealthRange): HealthSnapshot {
+    override suspend fun readSnapshot(range: HealthRange): HealthSnapshot {
         val status = ensureReady()
         val granted = client().permissionController.getGrantedPermissions()
         val metrics = buildSet {
@@ -131,7 +131,7 @@ class HealthConnectRepository(private val context: Context) {
         )
     }
 
-    suspend fun readTimeline(range: HealthRange): List<TimelineEvent> {
+    override suspend fun readTimeline(range: HealthRange): List<TimelineEvent> {
         val granted = client().permissionController.getGrantedPermissions()
         val events = mutableListOf<TimelineEvent>()
         data class ActivityMeasurement(
@@ -340,7 +340,7 @@ class HealthConnectRepository(private val context: Context) {
         }
     }
 
-    suspend fun readHeartRateSamples(range: HealthRange): List<Double> {
+    override suspend fun readHeartRateSamples(range: HealthRange): List<Double> {
         val granted = client().permissionController.getGrantedPermissions()
         if (permissionsFor(HeartRateRecord::class) !in granted) return emptyList()
         val samples = readAll<HeartRateRecord>(range)

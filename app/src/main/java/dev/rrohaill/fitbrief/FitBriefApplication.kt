@@ -1,12 +1,14 @@
 package dev.rrohaill.fitbrief
 
 import android.app.Application
-import dev.rrohaill.fitbrief.notifications.FitBriefWorkScheduler
-import dev.rrohaill.fitbrief.data.FitBriefPreferences
 
 class FitBriefApplication : Application() {
+    lateinit var container: AppContainer
+        private set
+
     override fun onCreate() {
         super.onCreate()
-        FitBriefWorkScheduler.schedule(this, FitBriefPreferences(this).refreshInterval().minutes.toLong())
+        container = AppContainer(this)
+        container.notificationScheduler.schedule(container.preferences.refreshInterval().minutes.toLong())
     }
 }
