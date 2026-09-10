@@ -21,6 +21,8 @@ class FakeHealthRepository : HealthRepository {
     override val permissions: Set<String> = setOf("steps", "heart")
     var granted = true
     var failWith: Throwable? = null
+    var gateFor: RangeOption? = null
+    val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
     val snapshotRanges = mutableListOf<HealthRange>()
     val heartRateRanges = mutableListOf<HealthRange>()
     var snapshotFor: (HealthRange) -> HealthSnapshot = { range ->
@@ -35,6 +37,7 @@ class FakeHealthRepository : HealthRepository {
 
     override suspend fun readSnapshot(range: HealthRange): HealthSnapshot {
         failWith?.let { throw it }
+        if (range.option == gateFor) gate.await()
         snapshotRanges += range
         return snapshotFor(range)
     }
@@ -80,6 +83,8 @@ class FakePreferences : FitBriefPreferencesStore {
 
 class FakeSummaryService : SummaryService {
     var backend = SummarizerBackend.Template
+    var failSummary: Throwable? = null
+    var summaryCalls = 0
     val metricRequests = mutableListOf<Pair<MetricType, String>>()
 
     override suspend fun summarize(
@@ -87,7 +92,11 @@ class FakeSummaryService : SummaryService {
         snapshot: HealthSnapshot,
         onProgress: (BackendProgress) -> Unit,
         onBackendFallback: (String) -> Unit
-    ) = FitBriefSummary(text = "Summary of ${snapshot.steps} steps", backend = backend)
+    ): FitBriefSummary {
+        summaryCalls++
+        failSummary?.let { throw it }
+        return FitBriefSummary(text = "Summary of ${snapshot.steps} steps", backend = backend)
+    }
 
     override suspend fun summarizeTimeline(
         backend: SummarizerBackend,

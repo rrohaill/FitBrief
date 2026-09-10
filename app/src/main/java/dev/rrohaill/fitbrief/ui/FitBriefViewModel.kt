@@ -36,8 +36,8 @@ class FitBriefViewModel(
     private data class RangeData(
         val snapshot: HealthSnapshot,
         val timeline: List<TimelineEvent>,
-        val summary: String,
-        val activeBackend: SummarizerBackend
+        val summary: String? = null,
+        val activeBackend: SummarizerBackend? = null
     )
 
     private val rangeCache = mutableMapOf<RangeOption, RangeData>()
@@ -65,6 +65,9 @@ class FitBriefViewModel(
 
     private inline fun updateSettings(transform: (SettingsUiState) -> SettingsUiState) =
         _uiState.update { it.copy(settings = transform(it.settings)) }
+
+    private inline fun updateIfVisible(range: RangeOption, transform: (FitBriefUiState) -> FitBriefUiState) =
+        _uiState.update { if (it.selectedRange == range) transform(it) else it }
 
     private inline fun updateMetricDetail(transform: (MetricDetailUiState) -> MetricDetailUiState) =
         _uiState.update { it.copy(metricDetail = transform(it.metricDetail)) }
@@ -104,18 +107,28 @@ class FitBriefViewModel(
                 message = null
             )
         }
-        if (cached == null) refresh()
+        when {
+            cached == null -> refresh()
+            cached.summary == null -> viewModelScope.launch { generateSummary(option) }
+        }
     }
 
     private fun restoreSelectedRange() {
-        val cached = rangeCache[_uiState.value.selectedRange]
+        val range = _uiState.value.selectedRange
+        val cached = rangeCache[range]
         if (cached == null) {
             refresh()
             return
         }
         _uiState.update {
-            it.copy(snapshot = cached.snapshot, timeline = cached.timeline, summary = cached.summary, activeBackend = cached.activeBackend)
+            it.copy(
+                snapshot = cached.snapshot,
+                timeline = cached.timeline,
+                summary = cached.summary ?: "",
+                activeBackend = cached.activeBackend
+            )
         }
+        if (cached.summary == null) viewModelScope.launch { generateSummary(range) }
     }
 
     fun selectBackend(backend: SummarizerBackend) {
@@ -123,49 +136,62 @@ class FitBriefViewModel(
     }
 
     fun refresh() {
+        val range = _uiState.value.selectedRange
         viewModelScope.launch {
-            val current = _uiState.value
             val status = runCatching { repository.permissionStatus() }.getOrElse { error ->
-                _uiState.update { it.copy(message = error.message, isLoading = false) }
+                updateIfVisible(range) { it.copy(message = error.message, isLoading = false) }
                 return@launch
             }
 
             _uiState.update { it.copy(permissionStatus = status) }
             if (!status.granted) {
-                _uiState.update { it.copy(message = "Grant Health Connect permissions to generate a summary.") }
+                updateIfVisible(range) { it.copy(message = "Grant Health Connect permissions to generate a summary.") }
                 return@launch
             }
 
-            _uiState.update { it.copy(isLoading = true, message = null, backendProgress = null) }
-            runCatching {
-                val range = current.selectedRange.toHealthRange()
-                val snapshot = repository.readSnapshot(range)
-                val timeline = repository.readTimeline(range)
-                _uiState.update { it.copy(snapshot = snapshot, timeline = timeline, message = null) }
-                val summary = summaryService.summarize(
-                    preferredBackend = current.selectedBackend,
-                    snapshot = snapshot,
-                    onProgress = { progress -> _uiState.update { it.copy(backendProgress = progress) } },
-                    onBackendFallback = { note -> _uiState.update { it.copy(message = note) } }
-                )
-                val enrichedTimeline = runCatching {
-                    summaryService.summarizeTimeline(summary.backend, snapshot, timeline)
-                }.getOrDefault(timeline)
-                Triple(snapshot, enrichedTimeline, summary)
-            }.onSuccess { (snapshot, timeline, summary) ->
-                rangeCache[current.selectedRange] = RangeData(snapshot, timeline, summary.text, summary.backend)
-                _uiState.update {
-                    it.copy(
-                        snapshot = snapshot,
-                        timeline = timeline,
-                        summary = summary.text,
-                        activeBackend = summary.backend,
-                        isLoading = false
-                    )
-                }
-            }.onFailure { error ->
-                _uiState.update { it.copy(isLoading = false, message = error.message ?: "Unable to refresh summary.") }
+            updateIfVisible(range) { it.copy(isLoading = true, message = null, backendProgress = null) }
+            val (snapshot, timeline) = runCatching {
+                val healthRange = range.toHealthRange()
+                repository.readSnapshot(healthRange) to repository.readTimeline(healthRange)
+            }.getOrElse { error ->
+                updateIfVisible(range) { it.copy(isLoading = false, message = error.message ?: "Unable to refresh summary.") }
+                return@launch
             }
+            rangeCache[range] = RangeData(snapshot, timeline)
+            updateIfVisible(range) {
+                it.copy(snapshot = snapshot, timeline = timeline, summary = "", activeBackend = null, message = null)
+            }
+            generateSummary(range)
+        }
+    }
+
+    private suspend fun generateSummary(range: RangeOption) {
+        val data = rangeCache[range] ?: return
+        val preferredBackend = _uiState.value.selectedBackend
+        updateIfVisible(range) { it.copy(isLoading = true, backendProgress = null) }
+        runCatching {
+            val summary = summaryService.summarize(
+                preferredBackend = preferredBackend,
+                snapshot = data.snapshot,
+                onProgress = { progress -> updateIfVisible(range) { it.copy(backendProgress = progress) } },
+                onBackendFallback = { note -> updateIfVisible(range) { it.copy(message = note) } }
+            )
+            val enrichedTimeline = runCatching {
+                summaryService.summarizeTimeline(summary.backend, data.snapshot, data.timeline)
+            }.getOrDefault(data.timeline)
+            summary to enrichedTimeline
+        }.onSuccess { (summary, enrichedTimeline) ->
+            rangeCache[range] = data.copy(timeline = enrichedTimeline, summary = summary.text, activeBackend = summary.backend)
+            updateIfVisible(range) {
+                it.copy(
+                    timeline = enrichedTimeline,
+                    summary = summary.text,
+                    activeBackend = summary.backend,
+                    isLoading = false
+                )
+            }
+        }.onFailure { error ->
+            updateIfVisible(range) { it.copy(isLoading = false, message = error.message ?: "Unable to generate summary.") }
         }
     }
 

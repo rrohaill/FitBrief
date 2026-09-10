@@ -244,4 +244,45 @@ class FitBriefViewModelTest {
         assertEquals(dashboardSnapshot, vm.uiState.value.snapshot)
         assertEquals(reads, repository.snapshotRanges.size)
     }
+
+    @Test
+    fun `data is cached even when the summary fails and only the summary is retried`() {
+        summaries.failSummary = IllegalStateException("Gemini Nano returned no summary.")
+        val vm = viewModel()
+        vm.selectRange(RangeOption.Week)
+        assertEquals(RangeOption.Week, vm.uiState.value.snapshot?.range?.option)
+        assertEquals("Gemini Nano returned no summary.", vm.uiState.value.message)
+        val reads = repository.snapshotRanges.size
+        val calls = summaries.summaryCalls
+
+        summaries.failSummary = null
+        vm.selectRange(RangeOption.Today)
+        vm.selectRange(RangeOption.Week)
+        assertEquals(reads + 1, repository.snapshotRanges.size)
+        assertEquals(calls + 2, summaries.summaryCalls)
+        assertEquals("Summary of 5000 steps", vm.uiState.value.summary)
+        assertNull(vm.uiState.value.message)
+    }
+
+    @Test
+    fun `a slow refresh does not overwrite the tab selected in the meantime`() {
+        repository.gateFor = RangeOption.Week
+        val vm = viewModel()
+        vm.selectRange(RangeOption.Week)
+        assertTrue(vm.uiState.value.isLoading)
+        vm.selectRange(RangeOption.Month)
+        assertEquals(RangeOption.Month, vm.uiState.value.snapshot?.range?.option)
+
+        repository.gate.complete(Unit)
+        val state = vm.uiState.value
+        assertEquals(RangeOption.Month, state.selectedRange)
+        assertEquals(RangeOption.Month, state.snapshot?.range?.option)
+        assertFalse(state.isLoading)
+
+        val reads = repository.snapshotRanges.size
+        vm.selectRange(RangeOption.Week)
+        assertEquals(reads, repository.snapshotRanges.size)
+        assertEquals(RangeOption.Week, vm.uiState.value.snapshot?.range?.option)
+        assertEquals("Summary of 5000 steps", vm.uiState.value.summary)
+    }
 }
