@@ -19,13 +19,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -33,16 +34,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import dev.rrohaill.fitbrief.data.RangeOption
 import dev.rrohaill.fitbrief.data.notable
@@ -54,6 +50,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DashboardScreen(
     state: FitBriefUiState,
@@ -65,34 +62,6 @@ internal fun DashboardScreen(
 ) {
     val snapshot = state.snapshot
     val dashboardScrollState = rememberScrollState()
-    var pullDistance by remember { mutableFloatStateOf(0f) }
-    val pullRefreshConnection = remember(state.isLoading, onRefresh) {
-        object : NestedScrollConnection {
-            fun triggerRefreshIfReady() {
-                if (pullDistance >= 120f && !state.isLoading) onRefresh()
-                pullDistance = 0f
-            }
-
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                return if (available.y > 0f && dashboardScrollState.value == 0 && !state.isLoading) {
-                    pullDistance += available.y
-                    Offset(0f, available.y)
-                } else {
-                    Offset.Zero
-                }
-            }
-
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                triggerRefreshIfReady()
-                return Velocity.Zero
-            }
-
-            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                triggerRefreshIfReady()
-                return Velocity.Zero
-            }
-        }
-    }
     val greeting = when (LocalTime.now().hour) {
         in 5..11 -> "Good morning"
         in 12..17 -> "Good afternoon"
@@ -103,9 +72,13 @@ internal fun DashboardScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Box(Modifier
-            .fillMaxSize()
-            .padding(padding)) {
+        PullToRefreshBox(
+            isRefreshing = state.isLoading,
+            onRefresh = onRefresh,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
             if (state.isLoading) {
                 AiPulseBackground()
             }
@@ -113,19 +86,9 @@ internal fun DashboardScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 24.dp)
-                    .nestedScroll(pullRefreshConnection)
                     .verticalScroll(dashboardScrollState),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (pullDistance > 0f && !state.isLoading) {
-                    LinearProgressIndicator(
-                        progress = { (pullDistance / 120f).coerceIn(0f, 1f) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(3.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                    )
-                }
                 Spacer(Modifier.height(8.dp))
                 Row(
                     Modifier.fillMaxWidth(),
