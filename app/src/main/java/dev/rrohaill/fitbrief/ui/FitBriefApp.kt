@@ -40,7 +40,7 @@ fun FitBriefApp(
         }
     }
     FitBriefTheme(
-        darkTheme = when (state.themeMode) {
+        darkTheme = when (state.settings.themeMode) {
             ThemeMode.System -> isSystemInDarkTheme()
             ThemeMode.Light -> false
             ThemeMode.Dark -> true

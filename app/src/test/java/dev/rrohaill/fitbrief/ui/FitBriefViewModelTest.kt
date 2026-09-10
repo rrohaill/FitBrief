@@ -42,9 +42,9 @@ class FitBriefViewModelTest {
         preferences.interval = RefreshInterval.OneHour
         preferences.weekly = true
         val state = viewModel().uiState.value
-        assertEquals(ThemeMode.Dark, state.themeMode)
-        assertEquals(RefreshInterval.OneHour, state.refreshInterval)
-        assertTrue(state.weeklyReportEnabled)
+        assertEquals(ThemeMode.Dark, state.settings.themeMode)
+        assertEquals(RefreshInterval.OneHour, state.settings.refreshInterval)
+        assertTrue(state.settings.weeklyReportEnabled)
         assertTrue(state.permissionStatus.granted)
         assertEquals(2, state.permissionStatus.grantedCount)
     }
@@ -87,9 +87,9 @@ class FitBriefViewModelTest {
         vm.refresh()
         vm.openMetricDetail(MetricType.Steps)
         val state = vm.uiState.value
-        assertEquals(MetricType.Steps, state.selectedMetric)
-        assertEquals("Insight: 5000 steps", state.metricInsight)
-        assertFalse(state.metricInsightLoading)
+        assertEquals(MetricType.Steps, state.metricDetail.metric)
+        assertEquals("Insight: 5000 steps", state.metricDetail.insight)
+        assertFalse(state.metricDetail.insightLoading)
         assertTrue(repository.heartRateRanges.isEmpty())
     }
 
@@ -97,7 +97,7 @@ class FitBriefViewModelTest {
     fun `opening a metric before any data is loaded requests no insight`() {
         val vm = viewModel()
         vm.openMetricDetail(MetricType.Steps)
-        assertNull(vm.uiState.value.metricInsight)
+        assertNull(vm.uiState.value.metricDetail.insight)
         assertTrue(summaries.metricRequests.isEmpty())
     }
 
@@ -105,7 +105,7 @@ class FitBriefViewModelTest {
     fun `opening heart rate also loads samples`() {
         val vm = viewModel()
         vm.openMetricDetail(MetricType.HeartRate)
-        assertEquals(listOf(60.0, 90.0), vm.uiState.value.metricHeartRateSamples)
+        assertEquals(listOf(60.0, 90.0), vm.uiState.value.metricDetail.heartRateSamples)
         assertEquals(1, repository.heartRateRanges.size)
     }
 
@@ -116,9 +116,9 @@ class FitBriefViewModelTest {
         repository.snapshotFor = { range -> dev.rrohaill.fitbrief.data.HealthSnapshot(range, 1, 0.0, 0.0, 0.0, 0, null, 360) }
         vm.navigateMetricDay(1)
         val state = vm.uiState.value
-        assertEquals(1, state.metricDayOffset)
+        assertEquals(1, state.metricDetail.dayOffset)
         assertEquals(360L, state.snapshot?.sleepMinutes)
-        assertEquals("Insight: 360 minutes of sleep", state.metricInsight)
+        assertEquals("Insight: 360 minutes of sleep", state.metricDetail.insight)
         assertFalse(state.isLoading)
         val loaded = repository.snapshotRanges.last()
         assertEquals(LocalDate.now().minusDays(1), loaded.start.atZone(java.time.ZoneId.systemDefault()).toLocalDate())
@@ -130,7 +130,7 @@ class FitBriefViewModelTest {
         vm.openMetricDetail(MetricType.Steps)
         val before = repository.snapshotRanges.size
         vm.navigateMetricDay(-1)
-        assertEquals(0, vm.uiState.value.metricDayOffset)
+        assertEquals(0, vm.uiState.value.metricDetail.dayOffset)
         assertEquals(before, repository.snapshotRanges.size)
     }
 
@@ -140,16 +140,16 @@ class FitBriefViewModelTest {
         vm.openMetricDetail(MetricType.Steps)
         vm.navigateMetricDay(2)
         vm.openMetricDate(LocalDate.of(2026, 9, 1))
-        assertEquals(LocalDate.of(2026, 9, 1), vm.uiState.value.metricDrilldownDate)
+        assertEquals(LocalDate.of(2026, 9, 1), vm.uiState.value.metricDetail.drilldownDate)
 
         vm.closeMetricDetail()
         val state = vm.uiState.value
-        assertNull(state.metricDrilldownDate)
-        assertEquals(MetricType.Steps, state.selectedMetric)
-        assertEquals(2, state.metricDayOffset)
+        assertNull(state.metricDetail.drilldownDate)
+        assertEquals(MetricType.Steps, state.metricDetail.metric)
+        assertEquals(2, state.metricDetail.dayOffset)
 
         vm.closeMetricDetail()
-        assertNull(vm.uiState.value.selectedMetric)
+        assertNull(vm.uiState.value.metricDetail.metric)
     }
 
     @Test

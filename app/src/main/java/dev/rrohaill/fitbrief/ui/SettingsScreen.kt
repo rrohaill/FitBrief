@@ -49,7 +49,8 @@ import java.util.Locale
 
 @Composable
 internal fun SettingsScreen(
-    state: FitBriefUiState,
+    settings: SettingsUiState,
+    grantedPermissionCount: Int,
     onBack: () -> Unit,
     onOpenHealthConnect: () -> Unit,
     onToggleDailySummary: () -> Unit,
@@ -94,23 +95,23 @@ internal fun SettingsScreen(
             SettingsSection("DATA SOURCE") {
                 SettingsRow(
                     "Health Connect Permissions",
-                    "Synced, ${state.permissionStatus.grantedCount} permissions active",
+                    "Synced, $grantedPermissionCount permissions active",
                     onClick = onOpenHealthConnect
                 )
                 SettingsRow(
                     "Data Refresh Interval",
-                    state.refreshInterval.label,
+                    settings.refreshInterval.label,
                     onClick = { refreshDialog = true })
             }
             SettingsSection("NOTIFICATIONS") {
                 SettingsRow(
                     "Daily Summary Alert",
-                    "Promptly at ${formatTime(state.dailySummaryTimeMinutes)}",
+                    "Promptly at ${formatTime(settings.dailySummaryTimeMinutes)}",
                     trailing = {
                         SettingSwitch(
-                            state.dailySummaryEnabled,
+                            settings.dailySummaryEnabled,
                             onClick = {
-                                if (state.dailySummaryEnabled) {
+                                if (settings.dailySummaryEnabled) {
                                     onToggleDailySummary()
                                 } else {
                                     timePickerTarget = "daily"
@@ -121,12 +122,12 @@ internal fun SettingsScreen(
                 )
                 SettingsRow(
                     "Weekly Progress Report",
-                    "${dayName(state.weeklyReportDayOfWeek)} at ${formatTime(state.weeklyReportTimeMinutes)}",
+                    "${dayName(settings.weeklyReportDayOfWeek)} at ${formatTime(settings.weeklyReportTimeMinutes)}",
                     trailing = {
                         SettingSwitch(
-                            state.weeklyReportEnabled,
+                            settings.weeklyReportEnabled,
                             onClick = {
-                                if (state.weeklyReportEnabled) {
+                                if (settings.weeklyReportEnabled) {
                                     onToggleWeeklyReport()
                                 } else {
                                     weeklyDayDialog = true
@@ -154,7 +155,7 @@ internal fun SettingsScreen(
                     trailing = { SettingSwitch(true, {}) })
             }
             SettingsSection("APPEARANCE") {
-                SettingsRow("Theme Mode", state.themeMode.label, onClick = { themeDialog = true })
+                SettingsRow("Theme Mode", settings.themeMode.label, onClick = { themeDialog = true })
             }
             SettingsSection("PRIVACY & LEGALS") {
                 SettingsRow(
@@ -190,7 +191,7 @@ internal fun SettingsScreen(
         ChoiceDialog(
             title = "Weekly report day",
             options = dayOptions,
-            selected = dayName(state.weeklyReportDayOfWeek),
+            selected = dayName(settings.weeklyReportDayOfWeek),
             onSelect = { selectedDay ->
                 val day = dayOptions.indexOf(selectedDay) + 1
                 onSetWeeklyReportDay(day)
@@ -202,7 +203,7 @@ internal fun SettingsScreen(
     }
     timePickerTarget?.let { target ->
         val minutes =
-            if (target == "daily") state.dailySummaryTimeMinutes else state.weeklyReportTimeMinutes
+            if (target == "daily") settings.dailySummaryTimeMinutes else settings.weeklyReportTimeMinutes
         val dialog = remember(target, minutes) {
             TimePickerDialog(
                 context,
@@ -232,7 +233,7 @@ internal fun SettingsScreen(
         }
     }
     SettingsDialogs(
-        state = state,
+        settings = settings,
         themeDialog = themeDialog,
         refreshDialog = refreshDialog,
         onChangeTheme = onChangeTheme,
@@ -252,7 +253,7 @@ private fun formatTime(minutes: Int): String =
 
 @Composable
 private fun SettingsDialogs(
-    state: FitBriefUiState,
+    settings: SettingsUiState,
     themeDialog: Boolean,
     refreshDialog: Boolean,
     onChangeTheme: (ThemeMode) -> Unit,
@@ -264,7 +265,7 @@ private fun SettingsDialogs(
         ChoiceDialog(
             "Theme Mode",
             ThemeMode.entries.map { it.label },
-            state.themeMode.label,
+            settings.themeMode.label,
             { label ->
                 ThemeMode.entries.firstOrNull { it.label == label }?.let(onChangeTheme)
                 closeTheme()
@@ -276,7 +277,7 @@ private fun SettingsDialogs(
         ChoiceDialog(
             "Data Refresh Interval",
             RefreshInterval.entries.map { it.label },
-            state.refreshInterval.label,
+            settings.refreshInterval.label,
             { label ->
                 RefreshInterval.entries.firstOrNull { it.label == label }
                     ?.let(onChangeRefreshInterval)
@@ -388,7 +389,8 @@ private fun SettingSwitch(enabled: Boolean, onClick: () -> Unit) {
 private fun SettingsLightPreview() {
     PreviewSurface(false) {
         SettingsScreen(
-            state = FitBriefUiState(),
+            settings = SettingsUiState(),
+            grantedPermissionCount = 7,
             onBack = {},
             onOpenHealthConnect = {},
             onToggleDailySummary = {},
@@ -408,7 +410,8 @@ private fun SettingsLightPreview() {
 private fun SettingsDarkPreview() {
     PreviewSurface(true) {
         SettingsScreen(
-            state = FitBriefUiState(),
+            settings = SettingsUiState(),
+            grantedPermissionCount = 7,
             onBack = {},
             onOpenHealthConnect = {},
             onToggleDailySummary = {},

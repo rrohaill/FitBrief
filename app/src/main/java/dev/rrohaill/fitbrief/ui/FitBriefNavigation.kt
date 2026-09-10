@@ -66,7 +66,8 @@ fun FitBriefNavigation(
         }
         composable("settings") {
             SettingsScreen(
-                state = state,
+                settings = state.settings,
+                grantedPermissionCount = state.permissionStatus.grantedCount,
                 onBack = { navController.popBackStack() },
                 onOpenHealthConnect = { onEvent(FitBriefEvent.OpenHealthConnect) },
                 onToggleDailySummary = { onEvent(FitBriefEvent.ToggleDailySummary) },
@@ -78,7 +79,7 @@ fun FitBriefNavigation(
                 onChangeTheme = { onEvent(FitBriefEvent.ChangeTheme(it)) },
                 onChangeRefreshInterval = { onEvent(FitBriefEvent.ChangeRefreshInterval(it)) }
             )
-            state.settingsNotice?.let { notice ->
+            state.settings.notice?.let { notice ->
                 AlertDialog(
                     onDismissRequest = { onEvent(FitBriefEvent.DismissSettingsNotice) },
                     title = { Text(notice.substringBefore("\n")) },
@@ -103,7 +104,7 @@ fun FitBriefNavigation(
                     metric = metric,
                     onClose = {
                         onEvent(FitBriefEvent.CloseMetric)
-                        if (state.metricDrilldownDate == null) navController.popBackStack()
+                        if (state.metricDetail.drilldownDate == null) navController.popBackStack()
                     },
                     onNavigateDay = { onEvent(FitBriefEvent.NavigateMetricDay(it)) },
                     onOpenMetricDate = { onEvent(FitBriefEvent.OpenMetricDate(it)) }

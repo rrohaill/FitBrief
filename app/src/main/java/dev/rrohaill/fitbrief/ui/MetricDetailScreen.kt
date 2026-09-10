@@ -62,16 +62,16 @@ internal fun MetricDetailScreen(
     val snapshot = state.snapshot
     val timeline = state.timeline
     val graphLoading = snapshot == null
-    var selectedBarDate by remember(metric, state.metricDrilldownDate) { mutableStateOf<LocalDate?>(null) }
-    val header = remember(metric, snapshot, timeline, state.metricHeartRateSamples, state.selectedRange, state.metricDayOffset, state.metricDrilldownDate) {
+    var selectedBarDate by remember(metric, state.metricDetail.drilldownDate) { mutableStateOf<LocalDate?>(null) }
+    val header = remember(metric, snapshot, timeline, state.metricDetail.heartRateSamples, state.selectedRange, state.metricDetail.dayOffset, state.metricDetail.drilldownDate) {
         buildMetricDetailHeader(
             metric = metric,
             snapshot = snapshot,
             timeline = timeline,
-            heartRateSamples = state.metricHeartRateSamples,
+            heartRateSamples = state.metricDetail.heartRateSamples,
             selectedRange = state.selectedRange,
-            dayOffset = state.metricDayOffset,
-            drilldownDate = state.metricDrilldownDate
+            dayOffset = state.metricDetail.dayOffset,
+            drilldownDate = state.metricDetail.drilldownDate
         )
     }
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
@@ -106,10 +106,10 @@ internal fun MetricDetailScreen(
                     "›",
                     MaterialTheme.colorScheme.surfaceContainer,
                     MaterialTheme.colorScheme.onSurface.copy(
-                        alpha = if (state.metricDayOffset == 0) 0.35f else 1f
+                        alpha = if (state.metricDetail.dayOffset == 0) 0.35f else 1f
                     ),
                     40.dp,
-                    onClick = { if (state.metricDayOffset > 0) onNavigateDay(-1) }
+                    onClick = { if (state.metricDetail.dayOffset > 0) onNavigateDay(-1) }
                 )
             }
             Card(
@@ -141,7 +141,7 @@ internal fun MetricDetailScreen(
                 }
             }
             if (!graphLoading) {
-                MetricDetailGraph(metric, snapshot, timeline, state.metricHeartRateSamples) { date ->
+                MetricDetailGraph(metric, snapshot, timeline, state.metricDetail.heartRateSamples) { date ->
                     selectedBarDate = date
                 }
                 selectedBarDate?.let { date ->
@@ -213,7 +213,7 @@ private fun MetricInsightCard(state: FitBriefUiState) {
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("AI insight", fontWeight = FontWeight.Bold)
-            if (state.metricInsightLoading) {
+            if (state.metricDetail.insightLoading) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -223,7 +223,7 @@ private fun MetricInsightCard(state: FitBriefUiState) {
                 }
             } else {
                 Text(
-                    state.metricInsight ?: "No AI insight is available for this metric yet.",
+                    state.metricDetail.insight ?: "No AI insight is available for this metric yet.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
