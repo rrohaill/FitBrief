@@ -6,5 +6,5 @@ interface HealthRepository {
     suspend fun readSnapshot(range: HealthRange): HealthSnapshot
     suspend fun readTimeline(range: HealthRange): List<TimelineEvent>
     suspend fun readHeartRateSamples(range: HealthRange): List<Double>
-    suspend fun readDailyHeartRate(range: HealthRange): List<DailyHeartRate>
+    suspend fun readDailyMetrics(range: HealthRange): List<DailyHealthMetrics>
 }

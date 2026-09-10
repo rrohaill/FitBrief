@@ -201,4 +201,14 @@ class FitBriefViewModelTest {
         assertTrue(vm.uiState.value.notificationsScheduled)
         assertEquals(listOf(24 * 60L), scheduler.intervals)
     }
+
+    @Test
+    fun `week detail loads daily totals for any metric`() {
+        repository.dailyMetrics = listOf(dev.rrohaill.fitbrief.data.DailyHealthMetrics(LocalDate.now(), steps = 4_000))
+        val vm = viewModel()
+        vm.selectRange(RangeOption.SevenDays)
+        vm.openMetricDetail(MetricType.Steps)
+        assertEquals(repository.dailyMetrics, vm.uiState.value.metricDetail.dailyMetrics)
+        assertTrue(repository.heartRateRanges.isEmpty())
+    }
 }

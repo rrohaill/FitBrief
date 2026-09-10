@@ -6,6 +6,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.viewModelScope
 import dev.rrohaill.fitbrief.AppContainer
+import dev.rrohaill.fitbrief.data.DailyHealthMetrics
 import dev.rrohaill.fitbrief.data.FitBriefPreferencesStore
 import dev.rrohaill.fitbrief.data.HealthRange
 import dev.rrohaill.fitbrief.data.HealthRepository
@@ -151,15 +152,11 @@ class FitBriefViewModel(
 
     fun openMetricDetail(metric: MetricType) {
         updateMetricDetail { MetricDetailUiState(metric = metric, insightLoading = true) }
-        if (metric != MetricType.HeartRate) {
-            generateMetricInsight()
-            return
-        }
         val range = _uiState.value.selectedRange.toHealthRangeForOffset(0)
         viewModelScope.launch {
-            runCatching { repository.readHeartRateSamples(range) to repository.readDailyHeartRate(range) }
+            runCatching { readMetricDetailData(range, metric) }
                 .onSuccess { (samples, daily) ->
-                    updateMetricDetail { it.copy(heartRateSamples = samples, dailyHeartRate = daily) }
+                    updateMetricDetail { it.copy(heartRateSamples = samples, dailyMetrics = daily) }
                 }
             generateMetricInsight()
         }
@@ -219,19 +216,15 @@ class FitBriefViewModel(
         }
         viewModelScope.launch {
             runCatching {
-                val heartRate = if (_uiState.value.metricDetail.metric == MetricType.HeartRate) {
-                    repository.readHeartRateSamples(range) to repository.readDailyHeartRate(range)
-                } else {
-                    emptyList<Double>() to emptyList()
-                }
-                Triple(repository.readSnapshot(range), repository.readTimeline(range), heartRate)
-            }.onSuccess { (snapshot, timeline, heartRate) ->
+                val detailData = readMetricDetailData(range, _uiState.value.metricDetail.metric)
+                Triple(repository.readSnapshot(range), repository.readTimeline(range), detailData)
+            }.onSuccess { (snapshot, timeline, detailData) ->
                 _uiState.update {
                     it.copy(
                         snapshot = snapshot,
                         timeline = timeline,
                         isLoading = false,
-                        metricDetail = it.metricDetail.copy(heartRateSamples = heartRate.first, dailyHeartRate = heartRate.second)
+                        metricDetail = it.metricDetail.copy(heartRateSamples = detailData.first, dailyMetrics = detailData.second)
                     )
                 }
                 generateMetricInsight()
@@ -239,6 +232,15 @@ class FitBriefViewModel(
                 _uiState.update { it.copy(isLoading = false, message = error.message ?: errorMessage) }
             }
         }
+    }
+
+    private suspend fun readMetricDetailData(
+        range: HealthRange,
+        metric: MetricType?
+    ): Pair<List<Double>, List<DailyHealthMetrics>> {
+        val samples = if (metric == MetricType.HeartRate) repository.readHeartRateSamples(range) else emptyList()
+        val daily = if (range.option == RangeOption.Today) emptyList() else repository.readDailyMetrics(range)
+        return samples to daily
     }
 
     private fun generateMetricInsight() {

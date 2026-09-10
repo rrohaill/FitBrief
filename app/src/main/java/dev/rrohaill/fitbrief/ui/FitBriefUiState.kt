@@ -1,6 +1,6 @@
 package dev.rrohaill.fitbrief.ui
 
-import dev.rrohaill.fitbrief.data.DailyHeartRate
+import dev.rrohaill.fitbrief.data.DailyHealthMetrics
 import dev.rrohaill.fitbrief.data.HealthConnectAvailability
 import dev.rrohaill.fitbrief.data.HealthSnapshot
 import dev.rrohaill.fitbrief.data.PermissionStatus
@@ -28,7 +28,7 @@ data class MetricDetailUiState(
     val dayOffset: Int = 0,
     val drilldownDate: LocalDate? = null,
     val heartRateSamples: List<Double> = emptyList(),
-    val dailyHeartRate: List<DailyHeartRate> = emptyList(),
+    val dailyMetrics: List<DailyHealthMetrics> = emptyList(),
     val insight: String? = null,
     val insightLoading: Boolean = false
 )

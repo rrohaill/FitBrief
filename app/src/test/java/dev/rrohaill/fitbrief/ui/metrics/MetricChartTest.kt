@@ -1,6 +1,6 @@
 package dev.rrohaill.fitbrief.ui.metrics
 
-import dev.rrohaill.fitbrief.data.DailyHeartRate
+import dev.rrohaill.fitbrief.data.DailyHealthMetrics
 import dev.rrohaill.fitbrief.data.RangeOption
 import dev.rrohaill.fitbrief.ui.MetricType
 import org.junit.Assert.assertEquals
@@ -118,13 +118,13 @@ class MetricChartTest {
 
     @Test
     fun `heart rate over a month plots one point per day with dates for drilldown`() {
-        val daily = (1..10).map { day -> DailyHeartRate(LocalDate.of(2026, 9, day), 60.0 + day) }
+        val daily = (1..10).map { day -> DailyHealthMetrics(LocalDate.of(2026, 9, day), averageHeartRateBpm = 60.0 + day) }
         val c = buildMetricChartModel(
             metric = MetricType.HeartRate,
             snapshot = snapshot(RangeOption.Month),
             timeline = listOf(event(monday, values = mapOf("heartRate" to 95.0))),
             heartRateSamples = listOf(50.0, 120.0),
-            dailyHeartRate = daily,
+            dailyMetrics = daily,
             zoneId = zone,
             now = LocalTime.NOON,
             locale = Locale.US
@@ -135,5 +135,32 @@ class MetricChartTest {
         assertEquals(50f, c.yMin)
         assertEquals(80f, c.yMax)
         assertEquals(listOf("80 bpm", "65 bpm", "50 bpm"), c.yAxisLabels)
+    }
+
+    @Test
+    fun `month bar charts use one bar per day from daily totals`() {
+        val daily = (1..10).map { day ->
+            DailyHealthMetrics(LocalDate.of(2026, 9, day), steps = day * 1_000L, sleepMinutes = 400L + day, exerciseMinutes = day.toLong())
+        }
+        val weeklyTimeline = listOf(event(monday, values = mapOf("steps" to 99_999.0)))
+        val steps = buildMetricChartModel(MetricType.Steps, snapshot(RangeOption.Month), weeklyTimeline, emptyList(), daily, zone, LocalTime.NOON, Locale.US)
+        assertEquals((1..10).map { it * 1_000f }, steps.values)
+        assertEquals(daily.map { it.date }, steps.barDates)
+        assertEquals(listOf("Sep 1", "Sep 5", "Sep 10"), steps.xLabels)
+        assertEquals(10_000f, steps.yMax)
+
+        val sleep = buildMetricChartModel(MetricType.Sleep, snapshot(RangeOption.Month), weeklyTimeline, emptyList(), daily, zone, LocalTime.NOON, Locale.US)
+        assertEquals(540f, sleep.yMax)
+        assertEquals(10, sleep.values.size)
+
+        val exercise = buildMetricChartModel(MetricType.Exercise, snapshot(RangeOption.Month), weeklyTimeline, emptyList(), daily, zone, LocalTime.NOON, Locale.US)
+        assertEquals(listOf("Sep 1", "Sep 5", "Sep 10"), exercise.xLabels)
+    }
+
+    @Test
+    fun `daily totals are ignored for today`() {
+        val daily = listOf(DailyHealthMetrics(monday, steps = 5_000))
+        val c = buildMetricChartModel(MetricType.Steps, snapshot(RangeOption.Today), emptyList(), emptyList(), daily, zone, LocalTime.NOON, Locale.US)
+        assertEquals(listOf(8_432f), c.values)
     }
 }

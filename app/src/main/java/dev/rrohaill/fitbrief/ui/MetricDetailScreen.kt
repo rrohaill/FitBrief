@@ -36,7 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import dev.rrohaill.fitbrief.data.DailyHeartRate
+import dev.rrohaill.fitbrief.data.DailyHealthMetrics
 import dev.rrohaill.fitbrief.data.HealthSnapshot
 import dev.rrohaill.fitbrief.data.TimelineEvent
 import dev.rrohaill.fitbrief.ui.charts.BarMetricGraph
@@ -143,7 +143,7 @@ internal fun MetricDetailScreen(
                 }
             }
             if (!graphLoading) {
-                MetricDetailGraph(metric, snapshot, timeline, state.metricDetail.heartRateSamples, state.metricDetail.dailyHeartRate) { date ->
+                MetricDetailGraph(metric, snapshot, timeline, state.metricDetail.heartRateSamples, state.metricDetail.dailyMetrics) { date ->
                     selectedBarDate = date
                 }
                 selectedBarDate?.let { date ->
@@ -259,12 +259,12 @@ private fun MetricDetailGraph(
     snapshot: HealthSnapshot?,
     timeline: List<TimelineEvent>,
     metricHeartRateSamples: List<Double>,
-    dailyHeartRate: List<DailyHeartRate>,
+    dailyMetrics: List<DailyHealthMetrics>,
     onBarSelected: (LocalDate) -> Unit
 ) {
     val color = MaterialTheme.colorScheme.primary
-    val chart = remember(metric, snapshot, timeline, metricHeartRateSamples, dailyHeartRate) {
-        buildMetricChartModel(metric, snapshot, timeline, metricHeartRateSamples, dailyHeartRate)
+    val chart = remember(metric, snapshot, timeline, metricHeartRateSamples, dailyMetrics) {
+        buildMetricChartModel(metric, snapshot, timeline, metricHeartRateSamples, dailyMetrics)
     }
     val values = chart.values
     val barDates = chart.barDates

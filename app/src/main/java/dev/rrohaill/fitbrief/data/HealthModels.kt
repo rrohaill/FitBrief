@@ -60,9 +60,15 @@ data class TimelineEvent(
     val samples: List<Double> = emptyList()
 )
 
-data class DailyHeartRate(
+data class DailyHealthMetrics(
     val date: LocalDate,
-    val averageBpm: Double
+    val steps: Long = 0,
+    val distanceMeters: Double = 0.0,
+    val activeCaloriesKcal: Double = 0.0,
+    val totalCaloriesKcal: Double = 0.0,
+    val exerciseMinutes: Long = 0,
+    val sleepMinutes: Long = 0,
+    val averageHeartRateBpm: Double? = null
 )
 
 data class PermissionStatus(

@@ -1,6 +1,6 @@
 package dev.rrohaill.fitbrief.ui
 
-import dev.rrohaill.fitbrief.data.DailyHeartRate
+import dev.rrohaill.fitbrief.data.DailyHealthMetrics
 import dev.rrohaill.fitbrief.data.FitBriefPreferencesStore
 import dev.rrohaill.fitbrief.data.HealthConnectAvailability
 import dev.rrohaill.fitbrief.data.HealthRange
@@ -45,8 +45,8 @@ class FakeHealthRepository : HealthRepository {
         return heartRateSamples
     }
 
-    var dailyHeartRate: List<DailyHeartRate> = emptyList()
-    override suspend fun readDailyHeartRate(range: HealthRange): List<DailyHeartRate> = dailyHeartRate
+    var dailyMetrics: List<DailyHealthMetrics> = emptyList()
+    override suspend fun readDailyMetrics(range: HealthRange): List<DailyHealthMetrics> = dailyMetrics
 }
 
 class FakePreferences : FitBriefPreferencesStore {

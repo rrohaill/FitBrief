@@ -2,6 +2,7 @@ package dev.rrohaill.fitbrief.data
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.aggregate.AggregateMetric
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
@@ -66,24 +67,7 @@ class HealthConnectRepository(private val context: Context) : HealthRepository {
     override suspend fun readSnapshot(range: HealthRange): HealthSnapshot {
         val status = ensureReady()
         val granted = client().permissionController.getGrantedPermissions()
-        val metrics = buildSet {
-            if (permissionsFor(StepsRecord::class).let(granted::contains)) add(StepsRecord.COUNT_TOTAL)
-            if (permissionsFor(DistanceRecord::class).let(granted::contains)) add(DistanceRecord.DISTANCE_TOTAL)
-            if (permissionsFor(ActiveCaloriesBurnedRecord::class).let(granted::contains)) {
-                add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
-            }
-
-            if (permissionsFor(TotalCaloriesBurnedRecord::class).let(granted::contains)) {
-                add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
-            }
-            if (permissionsFor(ExerciseSessionRecord::class).let(granted::contains)) {
-                add(ExerciseSessionRecord.EXERCISE_DURATION_TOTAL)
-            }
-            if (permissionsFor(HeartRateRecord::class).let(granted::contains)) add(HeartRateRecord.BPM_AVG)
-            if (permissionsFor(SleepSessionRecord::class).let(granted::contains)) {
-                add(SleepSessionRecord.SLEEP_DURATION_TOTAL)
-            }
-        }
+        val metrics = grantedAggregateMetrics(granted)
 
         val aggregate = client().aggregate(
             AggregateRequest(
@@ -247,13 +231,14 @@ class HealthConnectRepository(private val context: Context) : HealthRepository {
         }
     }
 
-    override suspend fun readDailyHeartRate(range: HealthRange): List<DailyHeartRate> {
+    override suspend fun readDailyMetrics(range: HealthRange): List<DailyHealthMetrics> {
         val granted = client().permissionController.getGrantedPermissions()
-        if (permissionsFor(HeartRateRecord::class) !in granted) return emptyList()
+        val metrics = grantedAggregateMetrics(granted)
+        if (metrics.isEmpty()) return emptyList()
         val zone = ZoneId.systemDefault()
         val groups = client().aggregateGroupByPeriod(
             AggregateGroupByPeriodRequest(
-                metrics = setOf(HeartRateRecord.BPM_AVG),
+                metrics = metrics,
                 timeRangeFilter = TimeRangeFilter.between(
                     range.start.atZone(zone).toLocalDateTime(),
                     range.end.atZone(zone).toLocalDateTime()
@@ -262,10 +247,29 @@ class HealthConnectRepository(private val context: Context) : HealthRepository {
             )
         )
         return groups
-            .mapNotNull { group ->
-                group.result[HeartRateRecord.BPM_AVG]?.let { DailyHeartRate(group.startTime.toLocalDate(), it.toDouble()) }
+            .map { group ->
+                DailyHealthMetrics(
+                    date = group.startTime.toLocalDate(),
+                    steps = group.result[StepsRecord.COUNT_TOTAL] ?: 0L,
+                    distanceMeters = group.result[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0,
+                    activeCaloriesKcal = group.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0,
+                    totalCaloriesKcal = group.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0,
+                    exerciseMinutes = group.result[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL]?.toWholeMinutes() ?: 0L,
+                    sleepMinutes = group.result[SleepSessionRecord.SLEEP_DURATION_TOTAL]?.toWholeMinutes() ?: 0L,
+                    averageHeartRateBpm = group.result[HeartRateRecord.BPM_AVG]?.toDouble()
+                )
             }
-            .sortedBy(DailyHeartRate::date)
+            .sortedBy(DailyHealthMetrics::date)
+    }
+
+    private fun grantedAggregateMetrics(granted: Set<String>): Set<AggregateMetric<*>> = buildSet {
+        if (permissionsFor(StepsRecord::class) in granted) add(StepsRecord.COUNT_TOTAL)
+        if (permissionsFor(DistanceRecord::class) in granted) add(DistanceRecord.DISTANCE_TOTAL)
+        if (permissionsFor(ActiveCaloriesBurnedRecord::class) in granted) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+        if (permissionsFor(TotalCaloriesBurnedRecord::class) in granted) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+        if (permissionsFor(ExerciseSessionRecord::class) in granted) add(ExerciseSessionRecord.EXERCISE_DURATION_TOTAL)
+        if (permissionsFor(HeartRateRecord::class) in granted) add(HeartRateRecord.BPM_AVG)
+        if (permissionsFor(SleepSessionRecord::class) in granted) add(SleepSessionRecord.SLEEP_DURATION_TOTAL)
     }
 
     private fun collapseTimelineByPeriod(
