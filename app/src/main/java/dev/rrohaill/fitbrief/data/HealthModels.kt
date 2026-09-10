@@ -60,6 +60,11 @@ data class TimelineEvent(
     val samples: List<Double> = emptyList()
 )
 
+data class DailyHeartRate(
+    val date: LocalDate,
+    val averageBpm: Double
+)
+
 data class PermissionStatus(
     val availability: HealthConnectAvailability,
     val granted: Boolean,

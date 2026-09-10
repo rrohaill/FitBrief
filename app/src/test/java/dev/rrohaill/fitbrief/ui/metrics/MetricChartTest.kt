@@ -1,5 +1,6 @@
 package dev.rrohaill.fitbrief.ui.metrics
 
+import dev.rrohaill.fitbrief.data.DailyHeartRate
 import dev.rrohaill.fitbrief.data.RangeOption
 import dev.rrohaill.fitbrief.ui.MetricType
 import org.junit.Assert.assertEquals
@@ -93,7 +94,7 @@ class MetricChartTest {
         val c = chart(MetricType.HeartRate, RangeOption.SevenDays, timeline)
         assertFalse(c.isHeartRateToday)
         assertEquals(listOf(75f, 90f), c.heartPeriodValues)
-        assertEquals(0f, c.yMin)
+        assertEquals(60f, c.yMin)
         assertEquals(100f, c.yMax)
     }
 
@@ -113,5 +114,26 @@ class MetricChartTest {
         val timeline = listOf(event(monday, samples = listOf(64.0, 71.0)))
         val c = chart(MetricType.HeartRate, timeline = timeline)
         assertEquals(listOf(64f, 71f), c.values)
+    }
+
+    @Test
+    fun `heart rate over a month plots one point per day with dates for drilldown`() {
+        val daily = (1..10).map { day -> DailyHeartRate(LocalDate.of(2026, 9, day), 60.0 + day) }
+        val c = buildMetricChartModel(
+            metric = MetricType.HeartRate,
+            snapshot = snapshot(RangeOption.Month),
+            timeline = listOf(event(monday, values = mapOf("heartRate" to 95.0))),
+            heartRateSamples = listOf(50.0, 120.0),
+            dailyHeartRate = daily,
+            zoneId = zone,
+            now = LocalTime.NOON,
+            locale = Locale.US
+        )
+        assertEquals((1..10).map { 60f + it }, c.heartPeriodValues)
+        assertEquals(daily.map { it.date }, c.barDates)
+        assertEquals(listOf("Sep 1", "Sep 5", "Sep 10"), c.xLabels)
+        assertEquals(50f, c.yMin)
+        assertEquals(80f, c.yMax)
+        assertEquals(listOf("80 bpm", "65 bpm", "50 bpm"), c.yAxisLabels)
     }
 }

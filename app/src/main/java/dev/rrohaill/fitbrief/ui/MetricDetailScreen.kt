@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.rrohaill.fitbrief.data.DailyHeartRate
 import dev.rrohaill.fitbrief.data.HealthSnapshot
 import dev.rrohaill.fitbrief.data.TimelineEvent
 import dev.rrohaill.fitbrief.ui.charts.BarMetricGraph
@@ -142,7 +143,7 @@ internal fun MetricDetailScreen(
                 }
             }
             if (!graphLoading) {
-                MetricDetailGraph(metric, snapshot, timeline, state.metricDetail.heartRateSamples) { date ->
+                MetricDetailGraph(metric, snapshot, timeline, state.metricDetail.heartRateSamples, state.metricDetail.dailyHeartRate) { date ->
                     selectedBarDate = date
                 }
                 selectedBarDate?.let { date ->
@@ -258,11 +259,12 @@ private fun MetricDetailGraph(
     snapshot: HealthSnapshot?,
     timeline: List<TimelineEvent>,
     metricHeartRateSamples: List<Double>,
+    dailyHeartRate: List<DailyHeartRate>,
     onBarSelected: (LocalDate) -> Unit
 ) {
     val color = MaterialTheme.colorScheme.primary
-    val chart = remember(metric, snapshot, timeline, metricHeartRateSamples) {
-        buildMetricChartModel(metric, snapshot, timeline, metricHeartRateSamples)
+    val chart = remember(metric, snapshot, timeline, metricHeartRateSamples, dailyHeartRate) {
+        buildMetricChartModel(metric, snapshot, timeline, metricHeartRateSamples, dailyHeartRate)
     }
     val values = chart.values
     val barDates = chart.barDates
@@ -296,7 +298,9 @@ private fun MetricDetailGraph(
                         MetricType.HeartRate -> if (chart.isHeartRateToday) {
                             HeartRateMetricGraph(values, chart.yMin, chart.yMax)
                         } else {
-                            HeartRatePeriodGraph(chart.heartPeriodValues, chart.range, Color(0xFF20C7F2))
+                            HeartRatePeriodGraph(chart.heartPeriodValues, chart.yMin, chart.yMax, Color(0xFF20C7F2)) { index ->
+                                barDates.getOrNull(index)?.let(onBarSelected)
+                            }
                         }
                         MetricType.Sleep -> SleepDurationGraph(values, chart.yMax) { index ->
                             barDates.getOrNull(index)?.let(onBarSelected)

@@ -276,19 +276,45 @@ internal fun HeartRateMetricGraph(values: List<Float>, chartMin: Float, chartMax
 }
 
 @Composable
-internal fun HeartRatePeriodGraph(values: List<Float>, range: RangeOption?, color: Color) {
-    Canvas(Modifier.fillMaxSize()) {
-        val chartValues = values.takeLast(if (range == RangeOption.SevenDays) 7 else 5)
-        val minValue = chartValues.minOrNull()?.coerceAtLeast(1f) ?: 1f
-        val maxValue = chartValues.maxOrNull()?.coerceAtLeast(minValue + 1f) ?: 1f
-        val step = size.width / (chartValues.size - 1).coerceAtLeast(1)
-        val points = chartValues.mapIndexed { index, value ->
-            Offset(index * step, size.height * (0.84f - ((value - minValue) / (maxValue - minValue)) * 0.58f))
+internal fun HeartRatePeriodGraph(
+    values: List<Float>,
+    chartMin: Float,
+    chartMax: Float,
+    color: Color,
+    onPointClick: (Int) -> Unit
+) {
+    Canvas(
+        Modifier
+            .fillMaxSize()
+            .pointerInput(values) {
+                detectTapGestures { offset ->
+                    val slot = size.width / values.size.coerceAtLeast(1)
+                    onPointClick((offset.x / slot).toInt().coerceIn(0, values.lastIndex))
+                }
+            }
+    ) {
+        if (values.isEmpty()) return@Canvas
+        val top = size.height * 0.08f
+        val bottom = size.height * 0.92f
+        val span = (chartMax - chartMin).coerceAtLeast(1f)
+        val slot = size.width / values.size
+        val points = values.mapIndexed { index, value ->
+            Offset(
+                x = slot * index + slot / 2f,
+                y = bottom - (bottom - top) * ((value - chartMin) / span).coerceIn(0f, 1f)
+            )
+        }
+        for (index in 0..3) {
+            val y = top + (bottom - top) * index / 3f
+            drawLine(color.copy(alpha = 0.12f), Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
         }
         points.zipWithNext().forEach { (start, end) ->
             drawLine(color, start, end, strokeWidth = 4f, cap = StrokeCap.Round)
         }
-        points.forEach { drawCircle(color, 6f, it) }
+        points.forEach {
+            drawCircle(Color.White, 7f, it)
+            drawCircle(color, 4f, it)
+        }
     }
 }
 

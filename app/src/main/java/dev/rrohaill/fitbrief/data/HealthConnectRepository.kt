@@ -3,6 +3,7 @@ package dev.rrohaill.fitbrief.data
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
@@ -17,6 +18,7 @@ import androidx.health.connect.client.records.Record
 import java.time.Duration
 import java.time.DayOfWeek
 import java.time.Instant
+import java.time.Period
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
@@ -243,6 +245,27 @@ class HealthConnectRepository(private val context: Context) : HealthRepository {
             val end = ((bucket + 1) * bucketSize).toInt().coerceAtMost(samples.size)
             samples.subList(start, end.coerceAtLeast(start + 1)).average()
         }
+    }
+
+    override suspend fun readDailyHeartRate(range: HealthRange): List<DailyHeartRate> {
+        val granted = client().permissionController.getGrantedPermissions()
+        if (permissionsFor(HeartRateRecord::class) !in granted) return emptyList()
+        val zone = ZoneId.systemDefault()
+        val groups = client().aggregateGroupByPeriod(
+            AggregateGroupByPeriodRequest(
+                metrics = setOf(HeartRateRecord.BPM_AVG),
+                timeRangeFilter = TimeRangeFilter.between(
+                    range.start.atZone(zone).toLocalDateTime(),
+                    range.end.atZone(zone).toLocalDateTime()
+                ),
+                timeRangeSlicer = Period.ofDays(1)
+            )
+        )
+        return groups
+            .mapNotNull { group ->
+                group.result[HeartRateRecord.BPM_AVG]?.let { DailyHeartRate(group.startTime.toLocalDate(), it.toDouble()) }
+            }
+            .sortedBy(DailyHeartRate::date)
     }
 
     private fun collapseTimelineByPeriod(

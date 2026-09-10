@@ -1,5 +1,6 @@
 package dev.rrohaill.fitbrief.ui.metrics
 
+import dev.rrohaill.fitbrief.data.DailyHeartRate
 import dev.rrohaill.fitbrief.data.HealthSnapshot
 import dev.rrohaill.fitbrief.data.RangeOption
 import dev.rrohaill.fitbrief.data.TimelineEvent
@@ -14,6 +15,7 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 import kotlin.math.ceil
+import kotlin.math.floor
 
 data class MetricChartModel(
     val metric: MetricType,
@@ -48,6 +50,7 @@ fun buildMetricChartModel(
     snapshot: HealthSnapshot?,
     timeline: List<TimelineEvent>,
     heartRateSamples: List<Double>,
+    dailyHeartRate: List<DailyHeartRate> = emptyList(),
     zoneId: ZoneId = ZoneId.systemDefault(),
     now: LocalTime = LocalTime.now(zoneId),
     locale: Locale = Locale.getDefault()
@@ -76,10 +79,11 @@ fun buildMetricChartModel(
         metricEvents.mapNotNull { it.values[key]?.toFloat() }
     }
     val values = measuredValues.ifEmpty { listOf(total) }
-    val barDates = metricEvents.map { it.timestamp.atZone(zoneId).toLocalDate() }
-
-    val heartPeriodValues = if (metric == MetricType.HeartRate) {
-        when (range) {
+    val isHeartRateToday = metric == MetricType.HeartRate && range == RangeOption.Today
+    val isHeartRatePeriod = metric == MetricType.HeartRate && !isHeartRateToday && dailyHeartRate.isNotEmpty()
+    val heartPeriodValues = when {
+        isHeartRatePeriod -> dailyHeartRate.map { it.averageBpm.toFloat() }
+        metric == MetricType.HeartRate -> when (range) {
             RangeOption.SevenDays -> DayOfWeek.entries.map { day ->
                 timeline
                     .filter { it.timestamp.atZone(zoneId).dayOfWeek == day }
@@ -95,13 +99,21 @@ fun buildMetricChartModel(
                 .map { week -> week.mapNotNull { it.values[key]?.toFloat() }.average().toFloat() }
             else -> values
         }.filter { it.isFinite() && it > 0f }
+        else -> values
+    }
+    val barDates = if (isHeartRatePeriod) {
+        dailyHeartRate.map { it.date }
     } else {
-        values
+        metricEvents.map { it.timestamp.atZone(zoneId).toLocalDate() }
     }
 
-    val isHeartRateToday = metric == MetricType.HeartRate && range == RangeOption.Today
-    val rawMax = values.maxOrNull()?.coerceAtLeast(1f) ?: 1f
-    val yMin = if (isHeartRateToday) 30f else 0f
+    val axisSeries = if (metric == MetricType.HeartRate && !isHeartRateToday) heartPeriodValues.ifEmpty { values } else values
+    val rawMax = axisSeries.maxOrNull()?.coerceAtLeast(1f) ?: 1f
+    val yMin = when {
+        isHeartRateToday -> 30f
+        metric == MetricType.HeartRate -> (floor(((axisSeries.minOrNull() ?: 0f) - 10f) / 10f) * 10f).coerceAtLeast(0f)
+        else -> 0f
+    }
     val yMax = when (metric) {
         MetricType.HeartRate -> {
             val margin = if (range == RangeOption.Today) 10f else 2f
@@ -136,7 +148,11 @@ fun buildMetricChartModel(
         metric == MetricType.Exercise -> listOf("0 min", "30 min", "60 min")
         isHeartRateToday -> listOf("12am", "4am", "8am", "12pm", now.format(DateTimeFormatter.ofPattern("h a", locale)))
         else -> {
-            val dates = metricEvents.map { it.timestamp }.sorted()
+            val dates = if (isHeartRatePeriod) {
+                dailyHeartRate.map { it.date.atStartOfDay(zoneId).toInstant() }
+            } else {
+                metricEvents.map { it.timestamp }.sorted()
+            }
             val pattern = when (range) {
                 RangeOption.SevenDays -> "EEE"
                 RangeOption.Month -> "MMM d"

@@ -157,8 +157,10 @@ class FitBriefViewModel(
         }
         val range = _uiState.value.selectedRange.toHealthRangeForOffset(0)
         viewModelScope.launch {
-            runCatching { repository.readHeartRateSamples(range) }
-                .onSuccess { samples -> updateMetricDetail { it.copy(heartRateSamples = samples) } }
+            runCatching { repository.readHeartRateSamples(range) to repository.readDailyHeartRate(range) }
+                .onSuccess { (samples, daily) ->
+                    updateMetricDetail { it.copy(heartRateSamples = samples, dailyHeartRate = daily) }
+                }
             generateMetricInsight()
         }
     }
@@ -217,19 +219,19 @@ class FitBriefViewModel(
         }
         viewModelScope.launch {
             runCatching {
-                val heartRateSamples = if (_uiState.value.metricDetail.metric == MetricType.HeartRate) {
-                    repository.readHeartRateSamples(range)
+                val heartRate = if (_uiState.value.metricDetail.metric == MetricType.HeartRate) {
+                    repository.readHeartRateSamples(range) to repository.readDailyHeartRate(range)
                 } else {
-                    emptyList()
+                    emptyList<Double>() to emptyList()
                 }
-                Triple(repository.readSnapshot(range), repository.readTimeline(range), heartRateSamples)
-            }.onSuccess { (snapshot, timeline, heartRateSamples) ->
+                Triple(repository.readSnapshot(range), repository.readTimeline(range), heartRate)
+            }.onSuccess { (snapshot, timeline, heartRate) ->
                 _uiState.update {
                     it.copy(
                         snapshot = snapshot,
                         timeline = timeline,
                         isLoading = false,
-                        metricDetail = it.metricDetail.copy(heartRateSamples = heartRateSamples)
+                        metricDetail = it.metricDetail.copy(heartRateSamples = heartRate.first, dailyHeartRate = heartRate.second)
                     )
                 }
                 generateMetricInsight()
