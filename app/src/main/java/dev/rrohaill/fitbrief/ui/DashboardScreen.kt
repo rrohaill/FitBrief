@@ -77,7 +77,8 @@ internal fun DashboardScreen(
             onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(padding),
+            indicator = {}
         ) {
             if (state.isLoading) {
                 AiPulseBackground()
