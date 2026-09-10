@@ -104,7 +104,7 @@ class MetricChartTest {
             event(monday.plusDays(3), values = mapOf("heartRate" to 80.0)),
             event(monday.plusDays(8), values = mapOf("heartRate" to 100.0))
         )
-        val c = chart(MetricType.HeartRate, RangeOption.ThirtyDays, timeline)
+        val c = chart(MetricType.HeartRate, RangeOption.Month, timeline)
         assertEquals(listOf(70f, 100f), c.heartPeriodValues)
     }
 

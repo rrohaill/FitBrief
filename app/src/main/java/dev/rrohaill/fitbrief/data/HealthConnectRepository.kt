@@ -220,7 +220,7 @@ class HealthConnectRepository(private val context: Context) : HealthRepository {
                 periodOf = { it.atZone(ZoneId.systemDefault()).toLocalDate() },
                 labelOf = { date -> date.format(DateTimeFormatter.ofPattern("EEEE, MMM d")) }
             )
-            RangeOption.ThirtyDays -> collapseTimelineByPeriod(
+            RangeOption.Month -> collapseTimelineByPeriod(
                 sortedEvents,
                 periodOf = {
                     it.atZone(ZoneId.systemDefault()).toLocalDate()

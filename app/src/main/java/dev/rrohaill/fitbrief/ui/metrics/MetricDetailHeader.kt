@@ -26,14 +26,11 @@ fun heartRateZone(bpm: Int): String = when {
     else -> "Light"
 }
 
-fun periodEndDate(range: RangeOption, dayOffset: Int, today: LocalDate): LocalDate =
-    today.minusDays(
-        when (range) {
-            RangeOption.Today -> dayOffset.toLong()
-            RangeOption.SevenDays -> dayOffset * 7L
-            RangeOption.ThirtyDays -> dayOffset * 30L
-        }
-    )
+fun periodEndDate(range: RangeOption, dayOffset: Int, today: LocalDate): LocalDate = when (range) {
+    RangeOption.Today -> today.minusDays(dayOffset.toLong())
+    RangeOption.SevenDays -> today.minusDays(dayOffset * 7L)
+    RangeOption.Month -> today.minusMonths(dayOffset.toLong())
+}
 
 fun buildMetricDetailHeader(
     metric: MetricType,
@@ -52,7 +49,7 @@ fun buildMetricDetailHeader(
     } else when (selectedRange) {
         RangeOption.Today -> periodDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy", locale))
         RangeOption.SevenDays -> "Week ending ${periodDate.format(DateTimeFormatter.ofPattern("MMM d", locale))}"
-        RangeOption.ThirtyDays -> "Month ending ${periodDate.format(DateTimeFormatter.ofPattern("MMM d", locale))}"
+        RangeOption.Month -> periodDate.format(DateTimeFormatter.ofPattern("MMMM yyyy", locale))
     }
 
     val samples = heartRateSamples.ifEmpty { timeline.flatMap { it.samples } }

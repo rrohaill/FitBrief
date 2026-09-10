@@ -1,7 +1,6 @@
 package dev.rrohaill.fitbrief.ui.metrics
 
 import dev.rrohaill.fitbrief.data.HealthSnapshot
-import dev.rrohaill.fitbrief.data.RangeOption
 import dev.rrohaill.fitbrief.ui.MetricType
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
@@ -28,12 +27,6 @@ data class MetricCardModel(
 
 private const val DAILY_STEP_GOAL = 10_000L
 
-fun RangeOption?.dayCount(): Int = when (this) {
-    RangeOption.SevenDays -> 7
-    RangeOption.ThirtyDays -> 30
-    RangeOption.Today, null -> 1
-}
-
 fun buildMetricCards(
     snapshot: HealthSnapshot?,
     showGraphs: Boolean = true,
@@ -41,7 +34,7 @@ fun buildMetricCards(
 ): List<MetricCardModel> {
     val data = snapshot ?: return emptyList()
     val decimal = DecimalFormat("#,##0.#", DecimalFormatSymbols(locale))
-    val stepGoal = data.range.option.dayCount() * DAILY_STEP_GOAL
+    val stepGoal = data.range.dayCount() * DAILY_STEP_GOAL
     val stepProgress = (data.steps.toFloat() / stepGoal).coerceIn(0f, 1f)
     val stepGoalPercent = (data.steps.toFloat() / stepGoal * 100f).roundToInt()
 

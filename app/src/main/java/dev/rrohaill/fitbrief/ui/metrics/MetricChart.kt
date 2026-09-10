@@ -86,7 +86,7 @@ fun buildMetricChartModel(
                     .mapNotNull { it.values[key]?.toFloat() }
                     .average().toFloat()
             }
-            RangeOption.ThirtyDays -> timeline
+            RangeOption.Month -> timeline
                 .groupBy {
                     it.timestamp.atZone(zoneId).toLocalDate()
                         .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
@@ -139,7 +139,7 @@ fun buildMetricChartModel(
             val dates = metricEvents.map { it.timestamp }.sorted()
             val pattern = when (range) {
                 RangeOption.SevenDays -> "EEE"
-                RangeOption.ThirtyDays -> "MMM d"
+                RangeOption.Month -> "MMM d"
                 RangeOption.Today, null -> "h a"
             }
             val formatter = DateTimeFormatter.ofPattern(pattern, locale)

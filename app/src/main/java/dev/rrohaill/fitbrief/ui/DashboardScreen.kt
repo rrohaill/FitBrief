@@ -288,7 +288,7 @@ private fun RangeTabs(selected: RangeOption, onSelect: (RangeOption) -> Unit) {
         listOf(
             RangeOption.Today to "Today",
             RangeOption.SevenDays to "Week",
-            RangeOption.ThirtyDays to "Month"
+            RangeOption.Month to "Month"
         ).forEach { (option, label) ->
             val active = option == selected
             Surface(

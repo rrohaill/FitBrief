@@ -21,7 +21,17 @@ internal fun snapshot(
     averageHeartRateBpm: Long? = 72,
     sleepMinutes: Long = 443
 ) = HealthSnapshot(
-    range = HealthRange(option, Instant.parse("2026-09-08T00:00:00Z"), Instant.parse("2026-09-08T12:00:00Z")),
+    range = HealthRange(
+        option,
+        Instant.parse(
+            when (option) {
+                RangeOption.Today -> "2026-09-08T00:00:00Z"
+                RangeOption.SevenDays -> "2026-09-02T00:00:00Z"
+                RangeOption.Month -> "2026-09-01T00:00:00Z"
+            }
+        ),
+        Instant.parse("2026-09-08T12:00:00Z")
+    ),
     steps = steps,
     distanceMeters = distanceMeters,
     activeCaloriesKcal = activeCaloriesKcal,

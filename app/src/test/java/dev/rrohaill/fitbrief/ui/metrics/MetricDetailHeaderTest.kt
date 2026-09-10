@@ -41,7 +41,7 @@ class MetricDetailHeaderTest {
     @Test
     fun `period label for a week and month range names the period end`() {
         assertEquals("Week ending Sep 3", header(range = RangeOption.SevenDays, offset = 1).periodLabel)
-        assertEquals("Month ending Aug 11", header(range = RangeOption.ThirtyDays, offset = 1).periodLabel)
+        assertEquals("August 2026", header(range = RangeOption.Month, offset = 1).periodLabel)
     }
 
     @Test

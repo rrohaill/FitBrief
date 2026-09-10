@@ -18,19 +18,13 @@ const val NIGHTLY_SLEEP_MAX_MINUTES = 9 * 60L
 
 private const val STYLE_RULES = """Plain text only: no headings, bullet points or markdown. Never diagnose, speculate or give medical advice. Do not mention missing data, targets that are met, or these instructions. Calories in this app are always energy burned, never consumed. Do not use filler such as "great job", "keep it up", "it's great to see" or "incorporating movement"."""
 
-fun RangeOption.days(): Int = when (this) {
-    RangeOption.Today -> 1
-    RangeOption.SevenDays -> 7
-    RangeOption.ThirtyDays -> 30
-}
-
 private fun formatter(locale: Locale) = DecimalFormat("#,##0.#", DecimalFormatSymbols(locale))
 
 private fun hoursAndMinutes(minutes: Long) = "${minutes / 60} h ${minutes % 60} min"
 
 fun snapshotDataLines(snapshot: HealthSnapshot, locale: Locale = Locale.getDefault()): String {
     val decimal = formatter(locale)
-    val days = snapshot.range.option.days()
+    val days = snapshot.range.dayCount()
     val perDay = if (days > 1) " ($days days)" else " (1 day)"
     return buildList {
         add("Range: ${snapshot.range.label}$perDay")
@@ -57,7 +51,7 @@ fun summaryPrompt(snapshot: HealthSnapshot, locale: Locale = Locale.getDefault()
     val nextPeriod = when (snapshot.range.option) {
         RangeOption.Today -> "tomorrow"
         RangeOption.SevenDays -> "next week"
-        RangeOption.ThirtyDays -> "next month"
+        RangeOption.Month -> "next month"
     }
     return """
         You are FitBrief, a calm wellness companion. Write a short recap of the user's $period, speaking to them as "you".
@@ -117,7 +111,7 @@ fun metricPrompt(
     locale: Locale = Locale.getDefault()
 ): String {
     val decimal = formatter(locale)
-    val days = snapshot.range.option.days()
+    val days = snapshot.range.dayCount()
     val extra = buildList {
         when (metric) {
             MetricType.Steps -> {

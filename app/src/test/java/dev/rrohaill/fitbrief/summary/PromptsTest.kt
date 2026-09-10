@@ -18,7 +18,10 @@ class PromptsTest {
     private val start = Instant.parse("2026-09-10T10:01:00Z")
 
     private fun snapshot(option: RangeOption = RangeOption.Today, steps: Long = 8_432, sleep: Long = 443, hr: Long? = 72) =
-        HealthSnapshot(HealthRange(option, start, start), steps, 6_240.0, 384.0, 1_820.0, 42, hr, sleep)
+        HealthSnapshot(
+            HealthRange(option, if (option == RangeOption.SevenDays) start.minusSeconds(6 * 86_400) else start, start.plusSeconds(60)),
+            steps, 6_240.0, 384.0, 1_820.0, 42, hr, sleep
+        )
 
     private fun window(minutes: Long, values: Map<String, Double>, samples: List<Double> = emptyList()) =
         TimelineEvent(start, "Walking activity", "detail", "♧", start.plusSeconds(minutes * 60), values = values, samples = samples)

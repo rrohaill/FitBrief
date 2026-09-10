@@ -4,6 +4,8 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalAdjusters
 
 private const val HEALTH_CONNECT_PROVIDER_PACKAGE = "com.google.android.apps.healthdata"
 
@@ -17,7 +19,7 @@ enum class HealthConnectAvailability {
 enum class RangeOption(val label: String) {
     Today("Today"),
     SevenDays("7 days"),
-    ThirtyDays("30 days")
+    Month("Month")
 }
 
 data class HealthRange(
@@ -26,6 +28,12 @@ data class HealthRange(
     val end: Instant
 ) {
     val label: String = option.label
+
+    fun dayCount(zoneId: ZoneId = ZoneId.systemDefault()): Int {
+        val first = start.atZone(zoneId).toLocalDate()
+        val last = end.minusSeconds(1).atZone(zoneId).toLocalDate()
+        return (ChronoUnit.DAYS.between(first, last) + 1).toInt().coerceAtLeast(1)
+    }
 }
 
 data class HealthSnapshot(
@@ -67,7 +75,7 @@ fun RangeOption.toHealthRange(
     val startDate = when (this) {
         RangeOption.Today -> today
         RangeOption.SevenDays -> today.minusDays(6)
-        RangeOption.ThirtyDays -> today.minusDays(29)
+        RangeOption.Month -> today.withDayOfMonth(1)
     }
 
     return HealthRange(
@@ -97,15 +105,12 @@ fun RangeOption.toHealthRangeForOffset(
     zoneId: ZoneId = ZoneId.systemDefault()
 ): HealthRange {
     val today = LocalDate.now(zoneId)
-    val endDate = when (this) {
-        RangeOption.Today -> today.minusDays(offset.toLong())
-        RangeOption.SevenDays -> today.minusDays(offset * 7L)
-        RangeOption.ThirtyDays -> today.minusDays(offset * 30L)
-    }
-    val startDate = when (this) {
-        RangeOption.Today -> endDate
-        RangeOption.SevenDays -> endDate.minusDays(6)
-        RangeOption.ThirtyDays -> endDate.minusDays(29)
+    val (startDate, endDate) = when (this) {
+        RangeOption.Today -> today.minusDays(offset.toLong()).let { it to it }
+        RangeOption.SevenDays -> today.minusDays(offset * 7L).let { it.minusDays(6) to it }
+        RangeOption.Month -> today.minusMonths(offset.toLong()).let {
+            it.withDayOfMonth(1) to it.with(TemporalAdjusters.lastDayOfMonth())
+        }
     }
     val end = if (offset == 0) clockNow else endDate.plusDays(1).atStartOfDay(zoneId).toInstant()
     return HealthRange(this, startDate.atStartOfDay(zoneId).toInstant(), end)
