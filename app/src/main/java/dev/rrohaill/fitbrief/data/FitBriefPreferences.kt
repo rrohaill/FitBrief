@@ -36,6 +36,13 @@ class FitBriefPreferences(context: Context) : FitBriefPreferencesStore {
             ?: RefreshInterval.FourHours
     }
 
+    override fun selectedRange(): RangeOption =
+        RangeOption.entries.firstOrNull { it.name == preferences.getString("selected_range", null) } ?: RangeOption.Today
+
+    override fun setSelectedRange(range: RangeOption) {
+        preferences.edit { putString("selected_range", range.name) }
+    }
+
     override fun setRefreshInterval(interval: RefreshInterval) {
         preferences.edit { putInt("refresh_interval_minutes", interval.minutes) }
     }

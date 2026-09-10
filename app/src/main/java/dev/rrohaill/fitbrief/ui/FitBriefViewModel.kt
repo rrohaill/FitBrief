@@ -14,6 +14,7 @@ import dev.rrohaill.fitbrief.data.HealthSnapshot
 import dev.rrohaill.fitbrief.data.RangeOption
 import dev.rrohaill.fitbrief.data.RefreshInterval
 import dev.rrohaill.fitbrief.data.ThemeMode
+import dev.rrohaill.fitbrief.data.TimelineEvent
 import dev.rrohaill.fitbrief.data.toHealthRange
 import dev.rrohaill.fitbrief.data.toHealthRangeForDate
 import dev.rrohaill.fitbrief.data.toHealthRangeForOffset
@@ -32,8 +33,18 @@ class FitBriefViewModel(
     private val summaryService: SummaryService,
     private val scheduler: NotificationScheduler
 ) : ViewModel() {
+    private data class RangeData(
+        val snapshot: HealthSnapshot,
+        val timeline: List<TimelineEvent>,
+        val summary: String,
+        val activeBackend: SummarizerBackend
+    )
+
+    private val rangeCache = mutableMapOf<RangeOption, RangeData>()
+
     private val _uiState = MutableStateFlow(
         FitBriefUiState(
+            selectedRange = preferences.selectedRange(),
             settings = SettingsUiState(
                 themeMode = preferences.themeMode(),
                 refreshInterval = preferences.refreshInterval(),
@@ -80,18 +91,31 @@ class FitBriefViewModel(
     }
 
     fun selectRange(option: RangeOption) {
+        preferences.setSelectedRange(option)
+        val cached = rangeCache[option]
         _uiState.update {
             it.copy(
                 selectedRange = option,
-                snapshot = null,
-                timeline = emptyList(),
-                summary = "",
-                activeBackend = null,
+                snapshot = cached?.snapshot,
+                timeline = cached?.timeline ?: emptyList(),
+                summary = cached?.summary ?: "",
+                activeBackend = cached?.activeBackend,
                 backendProgress = null,
                 message = null
             )
         }
-        refresh()
+        if (cached == null) refresh()
+    }
+
+    private fun restoreSelectedRange() {
+        val cached = rangeCache[_uiState.value.selectedRange]
+        if (cached == null) {
+            refresh()
+            return
+        }
+        _uiState.update {
+            it.copy(snapshot = cached.snapshot, timeline = cached.timeline, summary = cached.summary, activeBackend = cached.activeBackend)
+        }
     }
 
     fun selectBackend(backend: SummarizerBackend) {
@@ -129,6 +153,7 @@ class FitBriefViewModel(
                 }.getOrDefault(timeline)
                 Triple(snapshot, enrichedTimeline, summary)
             }.onSuccess { (snapshot, timeline, summary) ->
+                rangeCache[current.selectedRange] = RangeData(snapshot, timeline, summary.text, summary.backend)
                 _uiState.update {
                     it.copy(
                         snapshot = snapshot,
@@ -166,6 +191,7 @@ class FitBriefViewModel(
         val current = _uiState.value
         if (current.metricDetail.drilldownDate == null) {
             updateMetricDetail { it.copy(metric = null) }
+            if (current.metricDetail.dayOffset > 0) restoreSelectedRange()
             return
         }
         loadMetricPeriod(

@@ -4,6 +4,8 @@ interface FitBriefPreferencesStore {
     fun themeMode(): ThemeMode
     fun setThemeMode(mode: ThemeMode)
     fun refreshInterval(): RefreshInterval
+    fun selectedRange(): RangeOption
+    fun setSelectedRange(range: RangeOption)
     fun setRefreshInterval(interval: RefreshInterval)
     fun dailySummaryTimeMinutes(): Int
     fun setDailySummaryTimeMinutes(minutes: Int)

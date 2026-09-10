@@ -211,4 +211,37 @@ class FitBriefViewModelTest {
         assertEquals(repository.dailyMetrics, vm.uiState.value.metricDetail.dailyMetrics)
         assertTrue(repository.heartRateRanges.isEmpty())
     }
+
+    @Test
+    fun `switching back to a loaded range reuses cached data without reloading`() {
+        val vm = viewModel()
+        vm.refresh()
+        vm.selectRange(RangeOption.Week)
+        val reads = repository.snapshotRanges.size
+        vm.selectRange(RangeOption.Today)
+        assertEquals(reads, repository.snapshotRanges.size)
+        assertEquals(RangeOption.Today, vm.uiState.value.snapshot?.range?.option)
+        assertEquals("Summary of 5000 steps", vm.uiState.value.summary)
+        assertFalse(vm.uiState.value.isLoading)
+        assertEquals(RangeOption.Today, preferences.range)
+    }
+
+    @Test
+    fun `selected range is restored from preferences`() {
+        preferences.range = RangeOption.Month
+        assertEquals(RangeOption.Month, viewModel().uiState.value.selectedRange)
+    }
+
+    @Test
+    fun `leaving a paged metric detail restores the dashboard data`() {
+        val vm = viewModel()
+        vm.refresh()
+        val dashboardSnapshot = vm.uiState.value.snapshot
+        vm.openMetricDetail(MetricType.Steps)
+        vm.navigateMetricDay(1)
+        val reads = repository.snapshotRanges.size
+        vm.closeMetricDetail()
+        assertEquals(dashboardSnapshot, vm.uiState.value.snapshot)
+        assertEquals(reads, repository.snapshotRanges.size)
+    }
 }

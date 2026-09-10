@@ -7,6 +7,7 @@ import dev.rrohaill.fitbrief.data.HealthRange
 import dev.rrohaill.fitbrief.data.HealthRepository
 import dev.rrohaill.fitbrief.data.HealthSnapshot
 import dev.rrohaill.fitbrief.data.PermissionStatus
+import dev.rrohaill.fitbrief.data.RangeOption
 import dev.rrohaill.fitbrief.data.RefreshInterval
 import dev.rrohaill.fitbrief.data.ThemeMode
 import dev.rrohaill.fitbrief.data.TimelineEvent
@@ -61,6 +62,9 @@ class FakePreferences : FitBriefPreferencesStore {
     override fun themeMode() = theme
     override fun setThemeMode(mode: ThemeMode) { theme = mode }
     override fun refreshInterval() = interval
+    var range = RangeOption.Today
+    override fun selectedRange() = range
+    override fun setSelectedRange(range: RangeOption) { this.range = range }
     override fun setRefreshInterval(interval: RefreshInterval) { this.interval = interval }
     override fun dailySummaryTimeMinutes() = dailyTime
     override fun setDailySummaryTimeMinutes(minutes: Int) { dailyTime = minutes }
